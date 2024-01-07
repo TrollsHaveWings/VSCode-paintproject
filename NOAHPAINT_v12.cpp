@@ -69,13 +69,16 @@ int main(int argc, char **argv)
     // Init SDL with video subsystem
     SDL_Init(SDL_INIT_VIDEO);
 
-    // Create window and renderer
+    // Create window, Create renderer and Initiliaze texture
     SDL_Window *window = SDL_CreateWindow("Main Window",
         SDL_WINDOWPOS_UNDEFINED, 30, screenWidth, screenHeight, SDL_WINDOW_ALLOW_HIGHDPI);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
-    SDL_Texture *backgroundLayer = nullptr; // Declare the backgroundLayer variable
+    SDL_Texture *backgroundLayer = SDL_CreateTexture(renderer,
+        SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, screenWidth, screenHeight);
+    Uint32 *backgrounLayerPixels = new Uint32[screenWidth * screenHeight];
+    SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, screenWidth * sizeof(Uint32));
 
-    // Prompt the user for an option
+    // Prompt the user with an option to load an image
     std::cout << "Do you want to load an image? (y/n): ";
     char imageLoadOption;
     std::cin >> imageLoadOption;
@@ -93,27 +96,37 @@ int main(int argc, char **argv)
                 SDL_Surface *image = SDL_LoadBMP(imageName.c_str());
                 // Check if the file was loaded correctly
                 if (image != nullptr) {
-                    backgroundLayer = SDL_CreateTextureFromSurface(renderer, image);
-                    SDL_FreeSurface(image);
-                    printf("Image loaded\n");
-                    imageLoaded = true;
+                    SDL_Surface *imageSurface = SDL_ConvertSurfaceFormat(image, SDL_PIXELFORMAT_RGBA8888, 0);
+                    if (imageSurface != nullptr) {
+                        // Delete the old array and create a new one
+                        delete[] backgrounLayerPixels;
+                        backgrounLayerPixels = new Uint32[imageSurface->w * imageSurface->h];
+                        // Copy the pixel data
+                        memcpy(backgrounLayerPixels, imageSurface->pixels, imageSurface->w * imageSurface->h * sizeof(Uint32));
+                        // Update the texture
+                        SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, imageSurface->w * sizeof(Uint32));
+                        printf("Image loaded\n");
+                        imageLoaded = true;
+                    } else {
+                        printf("Error: Could not convert image surface.\n");
+                        imageLoaded = false;
+                    }
+                    // Free the image surface
+                    SDL_FreeSurface(imageSurface);
                 } else {
                     printf("Error: Could not read file correctly. ====> Please double check the file name and file location of the image you are trying to load and try again.\n Remember FILE NAMES ARE CASE SENSITIVE\n");
                     imageLoaded = false;
                 }
             } else {
                 printf("Error: Unsupported File Type. ====> The only supported image files that can be loaded are .bmp files.\n");
+                imageLoaded = false;
             }
         }
-    // FIXME: This is where the program is supposed to create a blank white surface, its working until the user hovers over it with the mouse.
+    // If the user does not want to load an image, then make the background layer a white screen.
     } else {
-        // Create texture from a blank surface
-        SDL_Surface *blankSurface = SDL_CreateRGBSurface(0, screenWidth, screenHeight, 32, 255, 255, 255, 255);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderClear(renderer);
-        backgroundLayer = SDL_CreateTextureFromSurface(renderer, blankSurface);
-        SDL_FreeSurface(blankSurface);
-        printf("Blank surface created\n");
+        memset(backgrounLayerPixels, 255, screenWidth * screenHeight * sizeof(Uint32));
+        SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, screenWidth * sizeof(Uint32));
+        printf ("Blank Canvas Created\n");
     }
 
     // Main Program loop
