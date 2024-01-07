@@ -19,7 +19,7 @@ enum Tool {
 Tool currentTool = BRUSH;
 
 // TODO: Add a function to allow the user to paint on the screen
-void paintBrush (int x1, int y1, int x2, int y2) {
+void paintBrush (int x1, int y1, int x2, int y2, int mouseDown_Flag) {
     printf("%d %d %d %d\n", x1, y1, x2, y2);
 }
 
@@ -43,15 +43,44 @@ void circle () {
 
 }
 
-void handleToolAction(int x1, int y1, int x2, int y2) {
+// Function to handle which tool to pass the variables to
+void handleToolAction(int x1, int y1, int x2, int y2, int mouseDown_Flag) {
     switch (currentTool) {
         case BRUSH:
-            paintBrush(x1, y1, x2, y2);
+            paintBrush(x1, y1, x2, y2, mouseDown_Flag);
             break;
         case !BRUSH:
             printf("Error: Tool not implemented yet\n");
             break;
     }
+}
+
+// Function to load an image
+bool loadImage(std::string imageName, Uint32*& backgrounLayerPixels, SDL_Texture* backgroundLayer) {
+    if (imageName.substr(imageName.find_last_of(".") + 1) != "bmp") {
+        printf("Error: Unsupported File Type. ====> The only supported image files that can be loaded are .bmp files.\n");
+        return false;
+    }
+
+    SDL_Surface *loadedImage = SDL_LoadBMP(imageName.c_str());
+    if (loadedImage == nullptr) {
+        printf("Error: Could not read file correctly. ====> Please double check the file name and file location of the image you are trying to load and try again.\n Remember FILE NAMES ARE CASE SENSITIVE\n");
+        return false;
+    }
+
+    SDL_Surface *convertedImageSurface = SDL_ConvertSurfaceFormat(loadedImage, SDL_PIXELFORMAT_RGBA8888, 0);
+    if (convertedImageSurface == nullptr) {
+        printf("Error: Could not convert image surface.\n");
+        return false;
+    }
+
+    backgrounLayerPixels = new Uint32[convertedImageSurface->w * convertedImageSurface->h];
+    memcpy(backgrounLayerPixels, convertedImageSurface->pixels, convertedImageSurface->w * convertedImageSurface->h * sizeof(Uint32));
+    SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, convertedImageSurface->w * sizeof(Uint32));
+
+    SDL_FreeSurface(convertedImageSurface);
+    printf("Image loaded\n");
+    return true;
 }
 
 // --------------------------------MAIN FUNCTION--------------------------------
@@ -69,14 +98,13 @@ int main(int argc, char **argv)
     // Init SDL with video subsystem
     SDL_Init(SDL_INIT_VIDEO);
 
-    // Create window, Create renderer and Initiliaze texture
+    // Init window, Init renderer, Init texture, Init pixel array
     SDL_Window *window = SDL_CreateWindow("Main Window",
         SDL_WINDOWPOS_UNDEFINED, 30, screenWidth, screenHeight, SDL_WINDOW_ALLOW_HIGHDPI);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
     SDL_Texture *backgroundLayer = SDL_CreateTexture(renderer,
         SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, screenWidth, screenHeight);
-    Uint32 *backgrounLayerPixels = new Uint32[screenWidth * screenHeight];
-    SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, screenWidth * sizeof(Uint32));
+    Uint32 *backgrounLayerPixels = nullptr;
 
     // Prompt the user with an option to load an image
     std::cout << "Do you want to load an image? (y/n): ";
@@ -90,40 +118,11 @@ int main(int argc, char **argv)
             std::cout << "Enter the name of the image you would like to open: ";
             std::string imageName;
             std::cin >> imageName;
-
-            // Check if the file extension is .bmp
-            if (imageName.substr(imageName.find_last_of(".") + 1) == "bmp") {
-                SDL_Surface *image = SDL_LoadBMP(imageName.c_str());
-                // Check if the file was loaded correctly
-                if (image != nullptr) {
-                    SDL_Surface *imageSurface = SDL_ConvertSurfaceFormat(image, SDL_PIXELFORMAT_RGBA8888, 0);
-                    if (imageSurface != nullptr) {
-                        // Delete the old array and create a new one
-                        delete[] backgrounLayerPixels;
-                        backgrounLayerPixels = new Uint32[imageSurface->w * imageSurface->h];
-                        // Copy the pixel data
-                        memcpy(backgrounLayerPixels, imageSurface->pixels, imageSurface->w * imageSurface->h * sizeof(Uint32));
-                        // Update the texture
-                        SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, imageSurface->w * sizeof(Uint32));
-                        printf("Image loaded\n");
-                        imageLoaded = true;
-                    } else {
-                        printf("Error: Could not convert image surface.\n");
-                        imageLoaded = false;
-                    }
-                    // Free the image surface
-                    SDL_FreeSurface(imageSurface);
-                } else {
-                    printf("Error: Could not read file correctly. ====> Please double check the file name and file location of the image you are trying to load and try again.\n Remember FILE NAMES ARE CASE SENSITIVE\n");
-                    imageLoaded = false;
-                }
-            } else {
-                printf("Error: Unsupported File Type. ====> The only supported image files that can be loaded are .bmp files.\n");
-                imageLoaded = false;
-            }
+            imageLoaded = loadImage(imageName, backgrounLayerPixels, backgroundLayer);
         }
     // If the user does not want to load an image, then make the background layer a white screen.
     } else {
+        backgrounLayerPixels = new Uint32[screenWidth * screenHeight];
         memset(backgrounLayerPixels, 255, screenWidth * screenHeight * sizeof(Uint32));
         SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, screenWidth * sizeof(Uint32));
         printf ("Blank Canvas Created\n");
@@ -145,7 +144,6 @@ int main(int argc, char **argv)
                 {
                 case SDLK_b:
                     currentTool = BRUSH;
-                    handleToolAction(x1, y1, x2, y2);
                     break;
                 }
         break;
@@ -154,6 +152,8 @@ int main(int argc, char **argv)
                 {
                 x1 = event.motion.x;
                 y1 = event.motion.y;
+                x2 = event.motion.x;
+                y2 = event.motion.y;
                 }
                 break;
             case SDL_MOUSEMOTION:
@@ -161,9 +161,14 @@ int main(int argc, char **argv)
                 {
                 x2 = event.motion.x;
                 y2 = event.motion.y;
+                handleToolAction(x1, y1, x2, y2, 1);
                 }
                 break;
             case SDL_MOUSEBUTTONUP:
+                if (event.button.button == SDL_BUTTON_LEFT)
+                {
+                handleToolAction(x1, y1, x2, y2, 0);
+                }
                 break;
         }
 
