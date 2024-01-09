@@ -6,6 +6,12 @@
 #include <iostream>
 #include <string>
 
+// Compile/Make Command for Mac: g++ -std=c++11 -Wall -Wextra -pedantic -o NOAHPAINT_v12 NOAHPAINT_v12.cpp -lSDL2 -lSDL2main -lSDL2_image
+// Compile/Make Command for Windows: g++ -I src/include -L src/lib NOAHPAINT_v12.cpp -o NOAHPAINT -lSDL2main -lSDL2 -lSDL2_image
+
+int screenWidth = 1920/2, screenHeight = 1080/2;
+Uint32 *backgrounLayerPixels = nullptr;
+
 // Define Global Variables
 enum Tool {
     BRUSH,
@@ -18,9 +24,13 @@ enum Tool {
 };
 Tool currentTool = BRUSH;
 
-// TODO: Add a function to allow the user to paint on the screen
-void paintBrush (int x1, int y1, int x2, int y2, int mouseDown_Flag) {
-    printf("%d %d %d %d\n", x1, y1, x2, y2);
+// TODO: Make this function draw to backgroundLayerPixels array
+void drawBrush (int x1, int y1, int x2, int y2, int mouseDown_Flag) {
+    printf("PAINT BRUSH MOTION %d %d %d %d %d\n", x1, y1, x2, y2, mouseDown_Flag);
+    if (mouseDown_Flag)
+    {
+        backgrounLayerPixels[x2 + y2 * screenWidth] = 0;
+    }
 }
 
 // TODO: Add a function to allow the user to erase parts of the screen
@@ -28,18 +38,57 @@ void eraser () {
 
 }
 
-// TODO: Add a function to allow the user to draw a line
-void line () {
+// TODO: Make this function draw to the BackgroundLayerPixels array
+void drawLine (int x1, int y1, int x2, int y2, int mouseDown_Flag) {
+    if (mouseDown_Flag)
+    {
+        printf("LINE MOTION %d %d %d %d %d\n", x1, y1, x2, y2, mouseDown_Flag);
+        //TODO: Add a function to allow the user to draw a line using rubber banding when mouse button down
+    }
+    else
+    {
+        printf("LINE BUTTON UP %d %d %d %d %d\n", x1, y1, x2, y2, mouseDown_Flag);
 
+        int dx = abs(x2 - x1), sx = x1 < x2 ? 1 : -1;
+        int dy = abs(y2 - y1), sy = y1 < y2 ? 1 : -1;
+        int err = (dx > dy ? dx : -dy) / 2, e2;
+        while(1)
+        {
+            backgrounLayerPixels[x1 + y1 * screenWidth] = 0;
+            if (x1 == x2 && y1 == y2) break;
+            e2 = err;
+            if (e2 > -dx) { err -= dy; x1 += sx; }
+            if (e2 < dy) { err += dx; y1 += sy; }
+        }
+    }
 }
 
-// TODO: Add a function to allow the user to draw a rectangle
-void rectangle () {
+// TODO: Make this function draw to the backgroundLayerPixels array
+void drawRect (int x1, int y1, int x2, int y2, int mouseDown_Flag) {
+    if (mouseDown_Flag)
+    {
+        printf("RECT MOTION %d %d %d %d %d\n", x1, y1, x2, y2, mouseDown_Flag);
+        //TODO: Add a function to allow the user to draw a rectangle using rubber banding when mouse button down
+    }
+    else
+    {
+        printf("RECT BUTTON UP %d %d %d %d %d\n", x1, y1, x2, y2, mouseDown_Flag);
 
+        for (int i = std::min(x1, x2) ; i <= std::max(x1, x2) ; i++)
+        {
+            backgrounLayerPixels[i + y1 * screenWidth] = 0;
+            backgrounLayerPixels[i + y2 * screenWidth] = 0;
+        }
+        for (int j = std::min(y1, y2) ; j <= std::max(y1, y2) ; j++)
+        {
+            backgrounLayerPixels[x1 + j * screenWidth] = 0;
+            backgrounLayerPixels[x2 + j * screenWidth] = 0;
+        }
+    }
 }
 
 // TODO: Add a function to allow the user to draw a circle
-void circle () {
+void drawCircle () {
 
 }
 
@@ -47,9 +96,15 @@ void circle () {
 void handleToolAction(int x1, int y1, int x2, int y2, int mouseDown_Flag) {
     switch (currentTool) {
         case BRUSH:
-            paintBrush(x1, y1, x2, y2, mouseDown_Flag);
+            drawBrush(x1, y1, x2, y2, mouseDown_Flag);
             break;
-        case !BRUSH:
+        case LINE:
+            drawLine(x1, y1, x2, y2, mouseDown_Flag);
+            break;
+        case RECTANGLE:
+            drawRect(x1, y1, x2, y2, mouseDown_Flag);
+            break;
+        default:
             printf("Error: Tool not implemented yet\n");
             break;
     }
@@ -89,7 +144,6 @@ int main(int argc, char **argv)
 {
     // Define local main function variables
     bool quit = false;
-    int screenWidth = 1920/2, screenHeight = 1080/2;
     int x1 = 0;
     int y1 = 0;
     int x2 = 0;
@@ -104,7 +158,6 @@ int main(int argc, char **argv)
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
     SDL_Texture *backgroundLayer = SDL_CreateTexture(renderer,
         SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, screenWidth, screenHeight);
-    Uint32 *backgrounLayerPixels = nullptr;
 
     // Prompt the user with an option to load an image
     std::cout << "Do you want to load an image? (y/n): ";
@@ -144,6 +197,24 @@ int main(int argc, char **argv)
                 {
                 case SDLK_b:
                     currentTool = BRUSH;
+                    break;
+                case SDLK_e:
+                    currentTool = ERASER;
+                    break;
+                case SDLK_l:
+                    currentTool = LINE;
+                    break;
+                case SDLK_r:
+                    currentTool = RECTANGLE;
+                    break;
+                case SDLK_c:
+                    currentTool = CIRCLE;
+                    break;
+                case SDLK_f:
+                    currentTool = FILL;
+                    break;
+                case SDLK_i:
+                    currentTool = EYEDROPPER;
                     break;
                 }
         break;
