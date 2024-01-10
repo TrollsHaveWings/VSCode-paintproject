@@ -1,17 +1,16 @@
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_events.h>
 #include <SDL2/SDL_image.h>
-#include <SDL2/SDL_keycode.h>
-#include <SDL2/SDL_render.h>
 #include <iostream>
 #include <string.h>
 #include <cmath>
+#include <vector>
 
 
 // Compile/Make Command for Mac: g++ -std=c++11 -Wall -Wextra -pedantic -o NOAHPAINT_v12 NOAHPAINT_v12.cpp -lSDL2 -lSDL2main -lSDL2_image
 // Compile/Make Command for Windows: g++ -I src/include -L src/lib NOAHPAINT_v12.cpp -o NOAHPAINT -lSDL2main -lSDL2 -lSDL2_image
 
-int screenWidth = 1920/2, screenHeight = 1080/2;
+int screenScale = 2;
+int screenWidth = 1920/screenScale, screenHeight = 1080/screenScale;
 Uint32 *backgrounLayerPixels = nullptr;
 
 // Define Global Variables
@@ -222,18 +221,29 @@ void handleToolAction(int x1, int y1, int x2, int y2, bool isMouseDown
 
 // Function to load an image
 bool loadImage(std::string imageName, Uint32*& backgrounLayerPixels, SDL_Texture* backgroundLayer) {
-    if (imageName.substr(imageName.find_last_of(".") + 1) != "bmp") {
-        printf("errorTermor: Unsupported File Type. ====> The only supported image files that can be loaded are .bmp files.\n");
+    std::vector<std::string> supportedExtensions = { "bmp", "png", "jpg", "jpeg", "gif" };
+    std::string fileExtension = imageName.substr(imageName.find_last_of(".") + 1);
+    bool isSupported = false;
+
+    for (const std::string& extension : supportedExtensions) {
+        if (fileExtension == extension) {
+            isSupported = true;
+            break;
+        }
+    }
+
+    if (!isSupported) {
+        printf("errorTermor: Unsupported File Type. ====> The only supported image files that can be loaded are .bmp, .png, .jpg, .jpeg, and .gif files.\n");
         return false;
     }
 
-    SDL_Surface *loadedImage = SDL_LoadBMP(imageName.c_str());
+    SDL_Surface* loadedImage = IMG_Load(imageName.c_str());
     if (loadedImage == nullptr) {
         printf("errorTermor: Could not read file correctly. ====> Please double check the file name and file location of the image you are trying to load and try again.\n Remember FILE NAMES ARE CASE SENSITIVE\n");
         return false;
     }
 
-    SDL_Surface *convertedImageSurface = SDL_ConvertSurfaceFormat(loadedImage, SDL_PIXELFORMAT_RGBA8888, 0);
+    SDL_Surface* convertedImageSurface = SDL_ConvertSurfaceFormat(loadedImage, SDL_PIXELFORMAT_RGBA8888, 0);
     if (convertedImageSurface == nullptr) {
         printf("errorTermor: Could not convert image surface.\n");
         return false;
@@ -252,24 +262,30 @@ bool loadImage(std::string imageName, Uint32*& backgrounLayerPixels, SDL_Texture
 
 int main(int argc, char **argv)
 {
-    // Define local main function variables
-    bool quit = false;
-    int x1 = 0;
-    int y1 = 0;
-    int x2 = 0;
-    int y2 = 0;
-
     // Init SDL with video subyStepstem
     SDL_Init(SDL_INIT_VIDEO);
 
-    // Init window, Init renderer, Init texture, Init pixel array
+    int mainWindowX, mainWindowY;
+
+    // Creating Main Window
     SDL_Window *window = SDL_CreateWindow("Main Window",
         SDL_WINDOWPOS_UNDEFINED, 30, screenWidth, screenHeight, SDL_WINDOW_ALLOW_HIGHDPI);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
     SDL_Texture *backgroundLayer = SDL_CreateTexture(renderer,
         SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, screenWidth, screenHeight);
+    SDL_GetWindowPosition(window, &mainWindowX, &mainWindowY);
 
-    // Prompt the user with an option to load an image
+    // Creating GUI Window
+    SDL_Window *GUI = SDL_CreateWindow(NULL,
+        SDL_WINDOWPOS_UNDEFINED, 30, 200/screenScale, 1080/screenScale, SDL_WINDOW_ALLOW_HIGHDPI);
+    SDL_Renderer *GUIrenderer = SDL_CreateRenderer(GUI, -1, 0);
+    SDL_Surface *GUIsurface = IMG_Load("GUI.png");
+    SDL_Texture *GUItexture = SDL_CreateTextureFromSurface(GUIrenderer, GUIsurface);
+    SDL_FreeSurface(GUIsurface);
+    SDL_RenderCopy(GUIrenderer, GUItexture, NULL, NULL);
+    SDL_RenderPresent(GUIrenderer);
+    SDL_SetWindowPosition(GUI, mainWindowX - 200/screenScale, mainWindowY);
+
     std::cout << "Do you want to load an image? (y/n): ";
     char imageLoadOption;
     std::cin >> imageLoadOption;
@@ -292,8 +308,14 @@ int main(int argc, char **argv)
         printf ("Blank Canvas Created\n");
     }
 
-    // Main Program loop
+    bool quit = false;
+    int x1 = 0;
+    int y1 = 0;
+    int x2 = 0;
+    int y2 = 0;
     SDL_Event event;
+
+    // Main Program loop
     while (!quit)
     {
         SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, screenWidth * sizeof(Uint32));
@@ -305,9 +327,64 @@ int main(int argc, char **argv)
             case SDL_QUIT:
                 quit = true;
                 break;
+            case SDL_WINDOWEVENT:
+                switch (event.window.event) {
+                    case SDL_WINDOWEVENT_CLOSE:
+                        if (event.window.windowID == SDL_GetWindowID(window)) {
+                            quit = true;
+                        }
+                        if (event.window.windowID == SDL_GetWindowID(GUI)) {
+                            quit = true;
+                        }
+                        break;
+                    case SDL_WINDOWEVENT_FOCUS_GAINED:
+                        if (event.window.windowID == SDL_GetWindowID(window)) {
+                            // The main window gained focus, raise the GUI window
+                            SDL_RaiseWindow(GUI);
+                        } else if (event.window.windowID == SDL_GetWindowID(GUI)) {
+                            // The GUI window gained focus, raise the main window
+                            SDL_RaiseWindow(window);
+                        }
+                        break;
+                    case SDL_WINDOWEVENT_MINIMIZED:
+                        if (event.window.windowID == SDL_GetWindowID(window)) {
+                            // The main window was minimized, minimize the GUI window
+                            SDL_MinimizeWindow(GUI);
+                        } else if (event.window.windowID == SDL_GetWindowID(GUI)) {
+                            // The GUI window was minimized, minimize the main window
+                            SDL_MinimizeWindow(window);
+                        }
+                        break;
+                    case SDL_WINDOWEVENT_MAXIMIZED:
+                        if (event.window.windowID == SDL_GetWindowID(window)) {
+                            // The main window was maximized, maximize the GUI window
+                            SDL_MaximizeWindow(GUI);
+                        } else if (event.window.windowID == SDL_GetWindowID(GUI)) {
+                            // The GUI window was maximized, maximize the main window
+                            SDL_MaximizeWindow(window);
+                        }
+                        break;
+                    case SDL_WINDOWEVENT_RESTORED:
+                    if (event.window.windowID == SDL_GetWindowID(window)) {
+                            // The main window was restored, restore the GUI window
+                            SDL_RestoreWindow(GUI);
+                        } else if (event.window.windowID == SDL_GetWindowID(GUI)) {
+                            // The GUI window was restored, restore the main window
+                            SDL_RestoreWindow(window);
+                        }
+                        break;
+                    default:
+                        if (event.window.windowID == SDL_GetWindowID(window)) {
+                            // The main window was moved
+                            int x, y;
+                            SDL_GetWindowPosition(window, &x, &y);
+                            SDL_SetWindowPosition(GUI, x - (200/screenScale), y);  // Assuming the width of the GUI window is 200
+                        }
+                        break;
+                }
+                break;
             case SDL_KEYDOWN:  // Check for a key press
-                switch (event.key.keysym.sym)  // Check which key was pressed
-                {
+                switch (event.key.keysym.sym) { // Check which key was pressed
                 case SDLK_b:
                     currentTool = BRUSH;
                     break;
@@ -330,7 +407,7 @@ int main(int argc, char **argv)
                     currentTool = EYEDROPPER;
                     break;
                 }
-        break;
+                break;
             case SDL_MOUSEBUTTONDOWN:
                 if (event.button.button == SDL_BUTTON_LEFT)
                 {
@@ -362,8 +439,14 @@ int main(int argc, char **argv)
 
     // Clean up, exit the program
     SDL_DestroyTexture(backgroundLayer);
+    SDL_DestroyTexture(GUItexture);
+
     SDL_DestroyRenderer(renderer);
+    SDL_DestroyRenderer(GUIrenderer);
+
     SDL_DestroyWindow(window);
+    SDL_DestroyWindow(GUI);
+
     SDL_Quit();
     return 0;
 }
