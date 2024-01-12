@@ -5,24 +5,20 @@
 #include <cmath>
 #include <vector>
 #include <sstream>
+#include <functional>
+#include "tinyfiledialogs.h" //external library for native file dialogs
 
 
+// Compile/Make Command: g++ -std=c++11 -Wall -Wextra -pedantic -o PalettePro PalettePro.cpp -lSDL2 -lSDL2main -lSDL2_image
 
-// Compile/Make Command for Mac: g++ -std=c++11 -Wall -Wextra -pedantic -o NOAHPAINT_v12 NOAHPAINT_v12.cpp -lSDL2 -lSDL2main -lSDL2_image
-// Compile/Make Command for Windows: g++ -I src/include -L src/lib NOAHPAINT_v12.cpp -o NOAHPAINT -lSDL2main -lSDL2 -lSDL2_image
+/* --------------------------------DECLARE GLOBAL VARIABLES-------------------------------- */
 
+// Window and Renderer Variables
 int screenScale = 2;
 int screenWidth = 1920/screenScale, screenHeight = 1080/screenScale;
 int guiWidth = 200/screenScale;
 Uint32 *backgrounLayerPixels = nullptr;
-
-// Define Global Variables
-int strokeWidth = 1;
-int strokeRed = 0, strokeGreen = 0, strokeBlue = 0, strokeAlpha = 255;
-int fillRed = -1, fillGreen = -1, fillBlue = -1, fillAlpha = 255;
-int fillStartRed = 0, fillStartGreen = 0, fillStartBlue = 0, fillStartAlpha = 255;
-int currentPixelRed = 0, currentPixelGreen = 0, currentPixelBlue = 0, currentPixelAlpha = 255;
-
+// Tool Variables
 enum Tool {
     BRUSH,
     ERASER,
@@ -32,15 +28,22 @@ enum Tool {
     FILL,
 };
 Tool currentTool = BRUSH;
+// Tool Setting Variables
+int strokeWidth = 1;
+int strokeRed = 0, strokeGreen = 0, strokeBlue = 0, strokeAlpha = 255;
+int fillRed = -1, fillGreen = -1, fillBlue = -1, fillAlpha = 255;
+int fillStartRed = 0, fillStartGreen = 0, fillStartBlue = 0, fillStartAlpha = 255;
+int currentPixelRed = 0, currentPixelGreen = 0, currentPixelBlue = 0, currentPixelAlpha = 255;
 
-//Function for drawing a filled circle when strokeWidth is greater than 1 - called in drawLine, drawCircle, drawEllipse, drawBrush
+
+
+/* --------------------------------FUNCTIONS-------------------------------- */
+
 void useStrokeWidth(int xCentre, int yCentre)
+//Function for drawing a filled circle when strokeWidth is greater than 1 - called in drawLine, drawCircle, drawEllipse, drawBrush
 {
-    uint32_t strokeColour32 = 0;
-    strokeColour32 |= (strokeRed & 255) << 24;
-    strokeColour32 |= (strokeGreen & 255) << 16;
-    strokeColour32 |= (strokeBlue & 255) << 8;
-    strokeColour32 |= (strokeAlpha & 255);
+    // Convert stroke and fill colors to 32-bit format
+    uint32_t strokeColour32 = (strokeRed & 255) << 24 | (strokeGreen & 255) << 16 | (strokeBlue & 255) << 8 | (strokeAlpha & 255);
 
     int radius = (strokeWidth+1)/2;
 
@@ -89,13 +92,12 @@ void useStrokeWidth(int xCentre, int yCentre)
     }
 }
 
-//Function for drawing to a single pixel or circular group of pixels when the left mouse button is held down.
-void drawBrush (int x1, int y1, int x2, int y2, bool isMouseDown) {
-    uint32_t strokeColour32 = 0;
-    strokeColour32 |= (strokeRed & 255) << 24;
-    strokeColour32 |= (strokeGreen & 255) << 16;
-    strokeColour32 |= (strokeBlue & 255) << 8;
-    strokeColour32 |= (strokeAlpha & 255);
+
+void drawBrush (int x1, int y1, int x2, int y2, bool isMouseDown)
+//Function for drawing a single pixel or calling the useStrokeWidth function when the left mouse button is held down.
+{
+    // Convert stroke and fill colors to 32-bit format
+    uint32_t strokeColour32 = (strokeRed & 255) << 24 | (strokeGreen & 255) << 16 | (strokeBlue & 255) << 8 | (strokeAlpha & 255);
 
     if (isMouseDown) {
         if (strokeWidth == 1)
@@ -104,14 +106,16 @@ void drawBrush (int x1, int y1, int x2, int y2, bool isMouseDown) {
         }
         else
         {
+            //if the stroke width is more than a single pixel draw a circle with the stroke width function
             useStrokeWidth(x2, y2);
         }
     }
 }
 
-/*Function for erasing a single pixel or circular group of pixels when the left mouse button is held down - 
-same as drawBrush but with white colour.*/
-void eraser (int x1, int y1, int x2, int y2, int isMouseDown) {
+
+void eraser (int x1, int y1, int x2, int y2, int isMouseDown)
+//Function for erasing a single pixel or calling the useStrokeWidth function when the left mouse button is held down.
+{
     if (isMouseDown)
     {
         if (strokeWidth == 1)
@@ -125,13 +129,12 @@ void eraser (int x1, int y1, int x2, int y2, int isMouseDown) {
     }
 }
 
-//Function for drawing a line using Eike's Bressingham's line algorithm.
-void drawLine (int x1, int y1, int x2, int y2, bool isMouseDown) {
-    uint32_t strokeColour32 = 0;
-    strokeColour32 |= (strokeRed & 255) << 24;
-    strokeColour32 |= (strokeGreen & 255) << 16;
-    strokeColour32 |= (strokeBlue & 255) << 8;
-    strokeColour32 |= (strokeAlpha & 255);
+
+void drawLine (int x1, int y1, int x2, int y2, bool isMouseDown)
+//Function for drawing a line using Eike's Bressingham's line algorithm. -- NOT MY OWN ALGO --
+{
+    // Convert stroke and fill colors to 32-bit format
+    uint32_t strokeColour32 = (strokeRed & 255) << 24 | (strokeGreen & 255) << 16 | (strokeBlue & 255) << 8 | (strokeAlpha & 255);
 
     if (isMouseDown)
     {
@@ -160,22 +163,13 @@ void drawLine (int x1, int y1, int x2, int y2, bool isMouseDown) {
     }
 }
 
-/*Function for drawing a rectangle - if the fillColour is not -1, the rectangle is filled with the fillColour first
-(more efficient than floodFill) then the stroke is drawn with strokeColour and strokeWidth.*/
 
 void drawRect (int x1, int y1, int x2, int y2, bool isMouseDown)
+// Function for drawing a rectangle - if the fillColour is not -1, the rectangle is filled with the fillColour first
 {
-    uint32_t strokeColour32 = 0;
-    strokeColour32 |= (strokeRed & 255) << 24;
-    strokeColour32 |= (strokeGreen & 255) << 16;
-    strokeColour32 |= (strokeBlue & 255) << 8;
-    strokeColour32 |= (strokeAlpha & 255);
-    uint32_t fillColour32 = 0;
-    fillColour32 |= (fillRed & 255) << 24;
-    fillColour32 |= (fillGreen & 255) << 16;
-    fillColour32 |= (fillBlue & 255) << 8;
-    fillColour32 |= (fillAlpha & 255);
-
+    // Convert stroke and fill colors to 32-bit format
+    uint32_t strokeColour32 = (strokeRed & 255) << 24 | (strokeGreen & 255) << 16 | (strokeBlue & 255) << 8 | (strokeAlpha & 255);
+    uint32_t fillColour32 = (fillRed & 255) << 24 | (fillGreen & 255) << 16 | (fillBlue & 255) << 8 | (fillAlpha & 255);
     if (isMouseDown)
     {
         //TODO: Add a function to allow the user to draw a rectangle using rubber banding when mouse button down
@@ -212,56 +206,43 @@ void drawRect (int x1, int y1, int x2, int y2, bool isMouseDown)
     }
 }
 
-/* Function for drawing an ellipse - if the fillColour is not -1, the ellipse is filled with the fillColour first 
-(more efficient than floodFill) then the stroke is drawn with strokeColour and strokeWidth. If either right or left shift
-are held down, a circle is drawn.*/
-void drawEllipse(int x1, int y1, int x2, int y2, bool isMouseDown) {
-    uint32_t strokeColour32 = 0;
-    strokeColour32 |= (strokeRed & 255) << 24;
-    strokeColour32 |= (strokeGreen & 255) << 16;
-    strokeColour32 |= (strokeBlue & 255) << 8;
-    strokeColour32 |= (strokeAlpha & 255);
-    uint32_t fillColour32 = 0;
-    fillColour32 |= (fillRed & 255) << 24;
-    fillColour32 |= (fillGreen & 255) << 16;
-    fillColour32 |= (fillBlue & 255) << 8;
-    fillColour32 |= (fillAlpha & 255);
 
-    if (isMouseDown)
-    {
+void drawEllipse(int x1, int y1, int x2, int y2, bool isMouseDown)
+/* Function for drawing an ellipse if the fillColour is not -1, the ellipse is filled with the fillColour first
+If either right or left shift are held down when drawing the ellipse, a perfect circle is drawn.
+
+Based upon midpoint ellipse algorithm from https://www.javatpoint.com/computer-graphics-midpoint-ellipse-algorithm */
+{
+    // Convert stroke and fill colors to 32-bit format
+    uint32_t strokeColour32 = (strokeRed & 255) << 24 | (strokeGreen & 255) << 16 | (strokeBlue & 255) << 8 | (strokeAlpha & 255);
+    uint32_t fillColour32 = (fillRed & 255) << 24 | (fillGreen & 255) << 16 | (fillBlue & 255) << 8 | (fillAlpha & 255);
+
+    if (isMouseDown) {
         // TODO: Add a function to allow the user to draw a rectangle (or ellipse) using rubber banding when mouse button down
-    }
-    else
-    {
-        // Based upon midpoint ellipse algorithm description at https://www.javatpoint.com/computer-graphics-midpoint-ellipse-algorithm
-        // Calculate centre of ellipse, xRadius and yRadius (for a circle these will each be the radius)
+    } else {
+        // Calculate ellipse parameters
         int yCentre = (y1 + y2) / 2;
         int xCentre = (x1 + x2) / 2;
         int xRadius = abs(x2 - x1) / 2;
         int yRadius = abs(y2 - y1) / 2;
-        //Radius is only used if plotting circles - ie with shift held down.
         int radius = std::min(xRadius, yRadius);
 
         SDL_Event ellipseEvent;
         SDL_WaitEvent(&ellipseEvent);
-        switch (ellipseEvent.type)
-        {
-            case SDL_KEYDOWN:  // Check for a key press
-                switch (ellipseEvent.key.keysym.sym) { // Check which key was pressed
-                case SDLK_LSHIFT:
-                    xRadius = radius;
-                    yRadius = radius;
-                    break;
-                case SDLK_RSHIFT:
-                    xRadius = radius;
-                    yRadius = radius;
-                    break;
+        switch (ellipseEvent.type) {
+            case SDL_KEYDOWN:
+                switch (ellipseEvent.key.keysym.sym) {
+                    case SDLK_LSHIFT:
+                    case SDLK_RSHIFT:
+                        xRadius = radius;
+                        yRadius = radius;
+                        break;
                 }
                 break;
         }
 
-        if (fillRed !=-1)
-        {
+        // Fill the ellipse if fill color is specified
+        if (fillRed != -1) {
             int xCurrent = 0;
             int yCurrent = yRadius;
             int aSquared = xRadius * xRadius;
@@ -275,12 +256,9 @@ void drawEllipse(int x1, int y1, int x2, int y2, bool isMouseDown) {
             int xDistance = 0;
             int yDistance = fourASquared * yCurrent;
 
-            // Region 1 - gradient less than 1
             int decisionParameter = round(bSquared - (aSquared * yRadius) + (0.25 * aSquared));
-            while (xDistance <= yDistance)
-            {
-                for (int xLoop = xCentre - xCurrent; xLoop <= xCentre + xCurrent; xLoop++)
-                {
+            while (xDistance <= yDistance) {
+                for (int xLoop = xCentre - xCurrent; xLoop <= xCentre + xCurrent; xLoop++) {
                     backgrounLayerPixels[xLoop + (yCentre + yCurrent) * screenWidth] = fillColour32;
                     backgrounLayerPixels[xLoop + (yCentre - yCurrent) * screenWidth] = fillColour32;
                 }
@@ -288,24 +266,18 @@ void drawEllipse(int x1, int y1, int x2, int y2, bool isMouseDown) {
                 xCurrent++;
                 xDistance += fourBSquared;
 
-                if (decisionParameter < 0)
-                {
+                if (decisionParameter < 0) {
                     decisionParameter += xDistance + twoBSquared;
-                }
-                else
-                {
+                } else {
                     yCurrent--;
                     yDistance -= fourASquared;
                     decisionParameter += xDistance - yDistance + twoBSquared;
                 }
             }
 
-            // Region 2 - gradient greater than 1
             decisionParameter = round(bSquared * (xCurrent + 0.5) * (xCurrent + 0.5) + aSquared * (yCurrent - 1) * (yCurrent - 1) - aSquared * bSquared);
-            while (yCurrent >= 0)
-            {
-                for (int xLoop = xCentre - xCurrent; xLoop <= xCentre + xCurrent; xLoop++)
-                {
+            while (yCurrent >= 0) {
+                for (int xLoop = xCentre - xCurrent; xLoop <= xCentre + xCurrent; xLoop++) {
                     backgrounLayerPixels[xLoop + (yCentre + yCurrent) * screenWidth] = fillColour32;
                     backgrounLayerPixels[xLoop + (yCentre - yCurrent) * screenWidth] = fillColour32;
                 }
@@ -313,12 +285,9 @@ void drawEllipse(int x1, int y1, int x2, int y2, bool isMouseDown) {
                 yCurrent--;
                 yDistance -= fourASquared;
 
-                if (decisionParameter > 0)
-                {
+                if (decisionParameter > 0) {
                     decisionParameter += aSquared - yDistance;
-                }
-                else
-                {
+                } else {
                     xCurrent++;
                     xDistance += fourBSquared;
                     decisionParameter += aSquared - yDistance + xDistance;
@@ -326,8 +295,8 @@ void drawEllipse(int x1, int y1, int x2, int y2, bool isMouseDown) {
             }
         }
 
-        if (strokeRed !=-1)
-        {
+        // Draw the stroke of the ellipse if stroke color is specified
+        if (strokeRed != -1) {
             int xCurrent = 0;
             int yCurrent = yRadius;
             int aSquared = xRadius * xRadius;
@@ -341,19 +310,14 @@ void drawEllipse(int x1, int y1, int x2, int y2, bool isMouseDown) {
             int xDistance = 0;
             int yDistance = fourASquared * yCurrent;
 
-            // Region 1 - gradient less than 1
             int decisionParameter = round(bSquared - (aSquared * yRadius) + (0.25 * aSquared));
-            while (xDistance <= yDistance)
-            {
-                if (strokeWidth == 1)
-                {
+            while (xDistance <= yDistance) {
+                if (strokeWidth == 1) {
                     backgrounLayerPixels[(xCentre + xCurrent) + (yCentre + yCurrent) * screenWidth] = strokeColour32;
                     backgrounLayerPixels[(xCentre - xCurrent) + (yCentre + yCurrent) * screenWidth] = strokeColour32;
                     backgrounLayerPixels[(xCentre + xCurrent) + (yCentre - yCurrent) * screenWidth] = strokeColour32;
                     backgrounLayerPixels[(xCentre - xCurrent) + (yCentre - yCurrent) * screenWidth] = strokeColour32;
-                }
-                else
-                {
+                } else {
                     useStrokeWidth((xCentre + xCurrent), (yCentre + yCurrent));
                     useStrokeWidth((xCentre - xCurrent), (yCentre + yCurrent));
                     useStrokeWidth((xCentre + xCurrent), (yCentre - yCurrent));
@@ -363,31 +327,23 @@ void drawEllipse(int x1, int y1, int x2, int y2, bool isMouseDown) {
                 xCurrent++;
                 xDistance += fourBSquared;
 
-                if (decisionParameter < 0)
-                {
+                if (decisionParameter < 0) {
                     decisionParameter += xDistance + twoBSquared;
-                }
-                else
-                {
+                } else {
                     yCurrent--;
                     yDistance -= fourASquared;
                     decisionParameter += xDistance - yDistance + twoBSquared;
                 }
             }
 
-            // Region 2 - gradient greater than 1
             decisionParameter = round(bSquared * (xCurrent + 0.5) * (xCurrent + 0.5) + aSquared * (yCurrent - 1) * (yCurrent - 1) - aSquared * bSquared);
-            while (yCurrent >= 0)
-            {
-                if (strokeWidth == 1)
-                {
+            while (yCurrent >= 0) {
+                if (strokeWidth == 1) {
                     backgrounLayerPixels[(xCentre + xCurrent) + (yCentre + yCurrent) * screenWidth] = strokeColour32;
                     backgrounLayerPixels[(xCentre - xCurrent) + (yCentre + yCurrent) * screenWidth] = strokeColour32;
                     backgrounLayerPixels[(xCentre + xCurrent) + (yCentre - yCurrent) * screenWidth] = strokeColour32;
                     backgrounLayerPixels[(xCentre - xCurrent) + (yCentre - yCurrent) * screenWidth] = strokeColour32;
-                }
-                else
-                {
+                } else {
                     useStrokeWidth((xCentre + xCurrent), (yCentre + yCurrent));
                     useStrokeWidth((xCentre - xCurrent), (yCentre + yCurrent));
                     useStrokeWidth((xCentre + xCurrent), (yCentre - yCurrent));
@@ -397,12 +353,9 @@ void drawEllipse(int x1, int y1, int x2, int y2, bool isMouseDown) {
                 yCurrent--;
                 yDistance -= fourASquared;
 
-                if (decisionParameter > 0)
-                {
+                if (decisionParameter > 0) {
                     decisionParameter += aSquared - yDistance;
-                }
-                else
-                {
+                } else {
                     xCurrent++;
                     xDistance += fourBSquared;
                     decisionParameter += aSquared - yDistance + xDistance;
@@ -412,8 +365,10 @@ void drawEllipse(int x1, int y1, int x2, int y2, bool isMouseDown) {
     }
 }
 
+
+void bucketFill (int xCurrent, int yCurrent, int isMouseDown)
 // Function for filling an area with the fillColour using 4-point approach outlined in Eike's lecture - may struggle with very large areas
-void bucketFill (int xCurrent, int yCurrent, int isMouseDown) {
+{
     uint32_t fillColour32 = 0;
     fillColour32 |= (fillRed & 255) << 24;
     fillColour32 |= (fillGreen & 255) << 16;
@@ -448,8 +403,132 @@ void bucketFill (int xCurrent, int yCurrent, int isMouseDown) {
     }
 }
 
-// Function to handle which tool to pass the variables to
-void handleToolAction(int x1, int y1, int x2, int y2, bool isMouseDown, bool drawing) {
+bool loadImage(Uint32*& backgrounLayerPixels, SDL_Texture* backgroundLayer)
+// Function opens a file dialog for the user to load an image
+{
+    const char * filters[5] = { "*.bmp", "*.png", "*.jpg", "*.jpeg", "*.gif" };
+    char const * imageName = tinyfd_openFileDialog(
+        "Open Image",  // Dialog title
+        "",            // Default file path
+        5,             // Number of filters
+        filters,       // Filters
+        NULL,          // Description for filters
+        0              // Allow multiple selection
+    );
+
+    if (!imageName) {
+        printf("No file was selected.\n");
+        return false;
+    }
+
+
+    SDL_Surface* loadedImage = IMG_Load(imageName);
+    if (loadedImage == nullptr) {
+        printf("error: Could not read file correctly. ====> Please double check the file name and file location of the image you are trying to load and try again.\n Remember FILE NAMES ARE CASE SENSITIVE\n");
+        return false;
+    }
+
+    SDL_Surface* convertedImageSurface = SDL_ConvertSurfaceFormat(loadedImage, SDL_PIXELFORMAT_RGBA8888, 0);
+    if (convertedImageSurface == nullptr) {
+        printf("error: Could not convert image surface.\n");
+        return false;
+    }
+
+    backgrounLayerPixels = new Uint32[convertedImageSurface->w * convertedImageSurface->h];
+    memcpy(backgrounLayerPixels, convertedImageSurface->pixels, convertedImageSurface->w * convertedImageSurface->h * sizeof(Uint32));
+    SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, convertedImageSurface->w * sizeof(Uint32));
+
+    SDL_FreeSurface(convertedImageSurface);
+    printf("Image loaded\n");
+    return true;
+}
+
+void handleGUIButtons(int x1, int y1)
+// Function to handle the buttons on the GUI
+{
+    struct Button {
+        int x1, y1, x2, y2;
+        std::function<void()> onClick;
+
+        bool contains(int x, int y) const {return x >= x1 && x < x2 && y >= y1 && y < y2;}
+    };
+    std::vector<Button> buttons = {
+        // Tool selection buttons
+        {0, 0, 50, 50, [](){ currentTool = BRUSH; }},
+        {50, 0, 100, 50, [](){ currentTool = ERASER; }},
+        {0, 50, 50, 100, [](){ currentTool = LINE; }},
+        {50, 50, 100, 100, [](){ currentTool = RECTANGLE; }},
+        {0, 100, 50, 150, [](){ currentTool = CIRCLE; }},
+        {50, 100, 100, 150, [](){ currentTool = FILL; }},
+
+        // Image load and save buttons
+        {0, 170, 50, 210, [](){ /* Image load call goes here */ }},
+        {50, 170, 100, 210, [](){ /* Image save call goes here */ }},
+
+        // Stroke width buttons Y = 230 - 250
+        {0, 230, 20, 250, [](){ strokeWidth = 1; }},
+        {20, 230, 40, 250, [](){ strokeWidth = 3; }},
+        {40, 230, 60, 250, [](){ strokeWidth = 5; }},
+        {60, 230, 80, 250, [](){ strokeWidth = 7; }},
+        {80, 230, 100, 250, [](){ strokeWidth = 9; }},
+
+        // --- Stroke colour buttons ---
+        // Stroke color buttons Y= 285 - 305
+        {0, 285, 25, 305, [](){ strokeRed = -1; strokeGreen = -1; strokeBlue = -1; }},
+        {25, 285, 50, 305, [](){ strokeRed = 255; strokeGreen = 255; strokeBlue = 255; }},
+        {50, 285, 75, 305, [](){ strokeRed = 0; strokeGreen = 0; strokeBlue = 0; }},
+        {75, 285, 100, 305, [](){ strokeRed = 255; strokeGreen = 0; strokeBlue = 0; }},
+        // Stroke color buttons Y = 310 - 330
+        {0, 310, 25, 330, [](){ strokeRed = 0; strokeGreen = 255; strokeBlue = 0; }},
+        {25, 310, 50, 330, [](){ strokeRed = 0; strokeGreen = 0; strokeBlue = 255; }},
+        {50, 310, 75, 330, [](){ strokeRed = 255; strokeGreen = 255; strokeBlue = 0; }},
+        {75, 310, 100, 330, [](){ strokeRed = 255; strokeGreen = 0; strokeBlue = 255; }},
+        // Stroke color buttons Y = 335 - 355
+        {0, 335, 25, 355, [](){ strokeRed = 0; strokeGreen = 255; strokeBlue = 255; }},
+        {25, 335, 50, 355, [](){ strokeRed = 255; strokeGreen = 255; strokeBlue = 255; }},
+        {50, 335, 75, 355, [](){ strokeRed = 128; strokeGreen = 128; strokeBlue = 128; }},
+        {75, 335, 100, 355, [](){ strokeRed = 128; strokeGreen = 0; strokeBlue = 0; }},
+        // Stroke color buttons Y = 360 - 380
+        {0, 360, 25, 380, [](){ strokeRed = 128; strokeGreen = 128; strokeBlue = 0; }},
+        {25, 360, 50, 380, [](){ strokeRed = 0; strokeGreen = 128; strokeBlue = 0; }},
+        {50, 360, 75, 380, [](){ strokeRed = 128; strokeGreen = 0; strokeBlue = 128; }},
+        {75, 360, 100, 380, [](){ strokeRed = 0; strokeGreen = 128; strokeBlue = 128; }},
+
+        // --- Fill colour buttons ---
+        // Fill color buttons Y= 420 - 440
+        {0, 420, 25, 440, [](){ fillRed = -1; fillGreen = -1; fillBlue = -1; }},
+        {25, 420, 50, 440, [](){ fillRed = 255; fillGreen = 255; fillBlue = 255; }},
+        {50, 420, 75, 440, [](){ fillRed = 0; fillGreen = 0; fillBlue = 0; }},
+        {75, 420, 100, 440, [](){ fillRed = 255; fillGreen = 0; fillBlue = 0; }},
+        // Fill color buttons Y = 445 - 465
+        {0, 445, 25, 465, [](){ fillRed = 0; fillGreen = 255; fillBlue = 0; }},
+        {25, 445, 50, 465, [](){ fillRed = 0; fillGreen = 0; fillBlue = 255; }},
+        {50, 445, 75, 465, [](){ fillRed = 255; fillGreen = 255; fillBlue = 0; }},
+        {75, 445, 100, 465, [](){ fillRed = 255; fillGreen = 0; fillBlue = 255; }},
+        // Fill color buttons Y = 470 - 490
+        {0, 470, 25, 490, [](){ fillRed = 0; fillGreen = 255; fillBlue = 255; }},
+        {25, 470, 50, 490, [](){ fillRed = 255; fillGreen = 255; fillBlue = 255; }},
+        {50, 470, 75, 490, [](){ fillRed = 128; fillGreen = 128; fillBlue = 128; }},
+        {75, 470, 100, 490, [](){ fillRed = 128; fillGreen = 0; fillBlue = 0; }},
+        // Fill color buttons Y = 495 - 515
+        {0, 495, 25, 515, [](){ fillRed = 128; fillGreen = 128; fillBlue = 0; }},
+        {25, 495, 50, 515, [](){ fillRed = 0; fillGreen = 128; fillBlue = 0; }},
+        {50, 495, 75, 515, [](){ fillRed = 128; fillGreen = 0; fillBlue = 128; }},
+        {75, 495, 100, 515, [](){ fillRed = 0; fillGreen = 128; fillBlue = 128; }},
+    };
+
+    for (const Button& button : buttons) {
+        if (button.contains(x1, y1)) {
+            button.onClick();
+            break;
+        }
+    }
+}
+
+
+void handleToolAction(int x1, int y1, int x2, int y2, bool isMouseDown, bool drawing)
+// Function to handle which tool to pass the variables based on the current tool selected
+{
     switch (currentTool) {
         case BRUSH:
             drawBrush(x1, y1, x2, y2, isMouseDown);
@@ -475,46 +554,8 @@ void handleToolAction(int x1, int y1, int x2, int y2, bool isMouseDown, bool dra
     }
 }
 
-// Function to load an image
-bool loadImage(std::string imageName, Uint32*& backgrounLayerPixels, SDL_Texture* backgroundLayer) {
-    std::vector<std::string> supportedExtensions = { "bmp", "png", "jpg", "jpeg", "gif" };
-    std::string fileExtension = imageName.substr(imageName.find_last_of(".") + 1);
-    bool isSupported = false;
 
-    for (const std::string& extension : supportedExtensions) {
-        if (fileExtension == extension) {
-            isSupported = true;
-            break;
-        }
-    }
-
-    if (!isSupported) {
-        printf("errorTermor: Unsupported File Type. ====> The only supported image files that can be loaded are .bmp, .png, .jpg, .jpeg, and .gif files.\n");
-        return false;
-    }
-
-    SDL_Surface* loadedImage = IMG_Load(imageName.c_str());
-    if (loadedImage == nullptr) {
-        printf("errorTermor: Could not read file correctly. ====> Please double check the file name and file location of the image you are trying to load and try again.\n Remember FILE NAMES ARE CASE SENSITIVE\n");
-        return false;
-    }
-
-    SDL_Surface* convertedImageSurface = SDL_ConvertSurfaceFormat(loadedImage, SDL_PIXELFORMAT_RGBA8888, 0);
-    if (convertedImageSurface == nullptr) {
-        printf("errorTermor: Could not convert image surface.\n");
-        return false;
-    }
-
-    backgrounLayerPixels = new Uint32[convertedImageSurface->w * convertedImageSurface->h];
-    memcpy(backgrounLayerPixels, convertedImageSurface->pixels, convertedImageSurface->w * convertedImageSurface->h * sizeof(Uint32));
-    SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, convertedImageSurface->w * sizeof(Uint32));
-
-    SDL_FreeSurface(convertedImageSurface);
-    printf("Image loaded\n");
-    return true;
-}
-
-// --------------------------------MAIN FUNCTION--------------------------------
+/* --------------------------------MAIN FUNCTION-------------------------------- */
 
 int main(int argc, char **argv)
 {
@@ -532,30 +573,14 @@ int main(int argc, char **argv)
         SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, screenWidth, screenHeight);
     SDL_GetWindowPosition(window, &mainWindowX, &mainWindowY);
 
+    // Creating Blank Canvas
+    backgrounLayerPixels = new Uint32[screenWidth * screenHeight];
+    memset(backgrounLayerPixels, 255, screenWidth * screenHeight * sizeof(Uint32));
+    SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, screenWidth * sizeof(Uint32));
+    printf ("Blank Canvas Created\n");
 
-    std::cout << "Do you want to load an image? (y/n): ";
-    char imageLoadOption;
-    std::cin >> imageLoadOption;
-
-    if (imageLoadOption == 'y' || imageLoadOption == 'Y') {
-        bool imageLoaded = false;
-        while (!imageLoaded) {
-            // Prompt the user for an image to open in console
-            std::cout << "Enter the name of the image you would like to open: ";
-            std::string imageName;
-            std::cin >> imageName;
-            imageLoaded = loadImage(imageName, backgrounLayerPixels, backgroundLayer);
-        }
-
-    // If the user does not want to load an image, then make the background layer a white screen.
-    } else {
-        backgrounLayerPixels = new Uint32[screenWidth * screenHeight];
-        memset(backgrounLayerPixels, 255, screenWidth * screenHeight * sizeof(Uint32));
-        SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, screenWidth * sizeof(Uint32));
-        printf ("Blank Canvas Created\n");
-    }
-
-    SDL_Surface *gui_image = IMG_Load("GUI2.png");
+    // Load GUI
+    SDL_Surface *gui_image = IMG_Load("GUI.png");
     SDL_Texture *guiTexture = SDL_CreateTextureFromSurface(renderer, gui_image);
     SDL_FreeSurface(gui_image);
     SDL_Rect dstrect = { 0, 0, guiWidth, screenHeight };
@@ -564,27 +589,28 @@ int main(int argc, char **argv)
     SDL_RenderPresent(renderer);
 
 
+
+    /* --------------------------------MAIN PROGRAM LOOP-------------------------------- */
+    SDL_Event event;
     bool quit = false;
     bool drawing = false;
     int x1 = 0;
     int y1 = 0;
     int x2 = 0;
     int y2 = 0;
-    SDL_Event event;
 
-    // Main Program loop
     while (!quit)
     {
         SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, screenWidth * sizeof(Uint32));
-
         SDL_WaitEvent(&event);
 
+        /* --------------------------------EVENT HANDLER-------------------------------- */
         switch (event.type)
         {
             case SDL_QUIT:
                 quit = true;
                 break;
-            case SDL_KEYDOWN:  // Check for a key press
+            case SDL_KEYDOWN:  // Check for a key press (hotkey functionality)
                 switch (event.key.keysym.sym) { // Check which key was pressed
                 case SDLK_b:
                     currentTool = BRUSH;
@@ -619,253 +645,35 @@ int main(int argc, char **argv)
                     }
                     else
                     {
-                        //If the user clicks on the GUI, check which tool they have selected - a little messy but it works.
-                        if (y1 >=0 && y1 < 50)
-                        {
-                            if (x1 >= 0 && x1 < 50)
-                            {
-                                currentTool = BRUSH;
-                            }
-                            else if (x1 >= 50 && x1 < 100)
-                            {
-                                currentTool = ERASER;
-                            }
+                        handleGUIButtons(x1, y1);
+                    };
+                    // Update the window title to show the current tool and colour settings and stroke width to user
+                    std::stringstream ss;
+                    std::string toolName;
+                    switch (currentTool) {
+                        case 0:
+                            toolName = "BRUSH";
+                            break;
+                        case 1:
+                            toolName = "ERASER";
+                            break;
+                        case 2:
+                            toolName = "LINE";
+                            break;
+                        case 3:
+                            toolName = "RECTANGLE";
+                            break;
+                        case 4:
+                            toolName = "CIRCLE";
+                            break;
+                        case 5:
+                            toolName = "FILL";
+                            break;
                         }
-                        else if (y1 >=50 && y1 < 100)
-                        {
-                            if (x1 >= 0 && x1 < 50)
-                            {
-                                currentTool = LINE;
-                            }
-                            else if (x1 >= 50 && x1 < 100)
-                            {
-                                currentTool = RECTANGLE;
-                            }
-                        }
-                        else if (y1 >= 100 && y1 < 150)
-                        {
-                            if (x1 >= 0 && x1 < 50)
-                            {
-                                currentTool = CIRCLE;
-                            }
-                            else if (x1 >= 50 && x1 < 100)
-                            {
-                                currentTool = FILL;
-                            }
-                        }
-                        else if (y1 >= 170 && y1 <= 210)
-                        {
-                            if (x1 >= 0 && x1 < 50)
-                            {
-                                //Image load call goes here
-                            }
-                            if (x1 >= 50 && x1 < 100)
-                            {
-                                //Image save call goes here
-                            }                         }
-                        else if (y1 >= 230 && y1 < 250)
-                        {
-                            if (x1 >= 0 && x1 < 20)
-                            {
-                                strokeWidth = 1;
-                            }
-                            else if (x1 >= 20 && x1 < 40)
-                            {
-                                strokeWidth = 3;
-                            }
-                            else if (x1 >= 40 && x1 < 60)
-                            {
-                                strokeWidth = 5;
-                            }
-                            else if (x1 >= 60 && x1 < 80)
-                            {
-                                strokeWidth = 7;
-                            }
-                            else if (x1 >= 80 && x1 < 100)
-                            {
-                                strokeWidth = 9;
-                            }
-                        }
-                        else if (y1 >= 285 && y1 <= 305)
-                        {
-                            if (x1 >= 0 && x1 < 25)
-                            {
-                                strokeRed = -1; strokeGreen = -1; strokeBlue = -1;
-                            }
-                            else if (x1 >= 25 && x1 < 50)
-                            {
-                                strokeRed = 255; strokeGreen = 255; strokeBlue = 255;
-                            }
-                            else if (x1 >= 50 && x1 < 75)
-                            {
-                                strokeRed = 0; strokeGreen = 0; strokeBlue = 0;
-                            }
-                            else if (x1 >= 75 && x1 < 100)
-                            {
-                                strokeRed = 255; strokeGreen = 0; strokeBlue = 0;
-                            }
-                        }
-                        else if (y1 >= 310 && y1 <= 330)
-                        {
-                            if (x1 >= 0 && x1 < 25)
-                            {
-                                strokeRed = 255; strokeGreen = 255; strokeBlue = 0;
-                            }
-                            else if (x1 >= 25 && x1 < 50)
-                            {
-                                strokeRed = 0; strokeGreen = 255; strokeBlue = 0;
-                            }
-                            else if (x1 >= 50 && x1 < 75)
-                            {
-                                strokeRed = 0; strokeGreen = 158; strokeBlue = 226;
-                            }
-                            else if (x1 >= 75 && x1 < 100)
-                            {
-                                strokeRed = 49; strokeGreen = 39; strokeBlue = 130;
-                            }
-                        }
-                        else if (y1 >= 335 && y1 <= 355)
-                        {
-                            if (x1 >= 0 && x1 < 25)
-                            {
-                                strokeRed = 229; strokeGreen = 0; strokeBlue = 126;
-                            }
-                            else if (x1 >= 25 && x1 < 50)
-                            {
-                                strokeRed = 189; strokeGreen = 22; strokeBlue = 34;
-                            }
-                            else if (x1 >= 50 && x1 < 75)
-                            {
-                                strokeRed = 242; strokeGreen = 145; strokeBlue = 0;
-                            }
-                            else if (x1 >= 75 && x1 < 100)
-                            {
-                                strokeRed = 147; strokeGreen = 192; strokeBlue = 31;
-                            }
-                        }
-                        else if (y1 >= 360 && y1 <= 380)
-                        {
-                            if (x1 >= 0 && x1 < 25)
-                            {
-                                strokeRed = 0; strokeGreen = 102; strokeBlue = 51;
-                            }
-                            else if (x1 >= 25 && x1 < 50)
-                            {
-                                strokeRed = 102; strokeGreen = 36; strokeBlue = 130;
-                            }
-                            else if (x1 >= 50 && x1 < 75)
-                            {
-                                strokeRed = 201; strokeGreen = 157; strokeBlue = 102;
-                            }
-                            else if (x1 >= 75 && x1 < 100)
-                            {
-                                strokeRed = 104; strokeGreen = 59; strokeBlue = 17;
-                            }
-                        }
-                        else if (y1 >= 420 && y1 <= 440)
-                        {
-                            if (x1 >= 0 && x1 < 25)
-                            {
-                                fillRed = -1; fillGreen = -1; fillBlue = -1;
-                            }
-                            else if (x1 >= 25 && x1 < 50)
-                            {
-                                fillRed = 255; fillGreen = 255; fillBlue = 255;
-                            }
-                            else if (x1 >= 50 && x1 < 75)
-                            {
-                                fillRed = 0; fillGreen = 0; fillBlue = 0;
-                            }
-                            else if (x1 >= 75 && x1 < 100)
-                            {
-                                fillRed = 255; fillGreen = 0; fillBlue = 0;
-                            }
-                        }
-                        else if (y1 >= 445 && y1 <= 465)
-                        {
-                            if (x1 >= 0 && x1 < 25)
-                            {
-                                fillRed = 255; fillGreen = 255; fillBlue = 0;
-                            }
-                            else if (x1 >= 25 && x1 < 50)
-                            {
-                                fillRed = 0; fillGreen = 255; fillBlue = 0;
-                            }
-                            else if (x1 >= 50 && x1 < 75)
-                            {
-                                fillRed = 0; fillGreen = 158; fillBlue = 226;
-                            }
-                            else if (x1 >= 75 && x1 < 100)
-                            {
-                                fillRed = 49; fillGreen = 39; fillBlue = 130;
-                            }
-                        }
-                        else if (y1 >= 470 && y1 <= 490)
-                        {
-                            if (x1 >= 0 && x1 < 25)
-                            {
-                                fillRed = 229; fillGreen = 0; fillBlue = 126;
-                            }
-                            else if (x1 >= 25 && x1 < 50)
-                            {
-                                fillRed = 189; fillGreen = 22; fillBlue = 34;
-                            }
-                            else if (x1 >= 50 && x1 < 75)
-                            {
-                                fillRed = 242; fillGreen = 145; fillBlue = 0;
-                            }
-                            else if (x1 >= 75 && x1 < 100)
-                            {
-                                fillRed = 147; fillGreen = 192; fillBlue = 31;
-                            }
-                        }
-                        else if (y1 >= 495 && y1 <= 515)
-                        {
-                            if (x1 >= 0 && x1 < 25)
-                            {
-                                fillRed = 0; fillGreen = 102; fillBlue = 51;
-                            }
-                            else if (x1 >= 25 && x1 < 50)
-                            {
-                                fillRed = 102; fillGreen = 36; fillBlue = 130;
-                            }
-                            else if (x1 >= 50 && x1 < 75)
-                            {
-                                fillRed = 201; fillGreen = 157; fillBlue = 102;
-                            }
-                            else if (x1 >= 75 && x1 < 100)
-                            {
-                                fillRed = 104; fillGreen = 59; fillBlue = 17;
-                            }
-                        }
-                        // Update the window title to show the current tool and colour settings and stroke width to user
-                        std::stringstream ss;
-                        std::string toolName;
-                        switch (currentTool) {
-                            case 0:
-                                toolName = "BRUSH";
-                                break;
-                            case 1:
-                                toolName = "ERASER";
-                                break;
-                            case 2:
-                                toolName = "LINE";
-                                break;
-                            case 3:
-                                toolName = "RECTANGLE";
-                                break;
-                            case 4:
-                                toolName = "CIRCLE";
-                                break;
-                            case 5:
-                                toolName = "FILL";
-                                break;
-                            }
-                            ss << toolName << " SELECTED, STROKE WIDTH " << strokeWidth << ", STROKE COLOUR (" << strokeRed << "," << strokeGreen << "," << strokeBlue << "), FILL COLOUR (" << fillRed << "," << fillGreen << "," << fillBlue << ")"; 
-                            SDL_SetWindowTitle(window, ss.str().c_str());
-                        }
+                        ss << toolName << " SELECTED, STROKE WIDTH " << strokeWidth << ", STROKE COLOUR (" << strokeRed << "," << strokeGreen << "," << strokeBlue << "), FILL COLOUR (" << fillRed << "," << fillGreen << "," << fillBlue << ")"; 
+                    SDL_SetWindowTitle(window, ss.str().c_str());
                 }
-                break;
+            break;
             case SDL_MOUSEMOTION:
                 if (event.button.button == SDL_BUTTON_LEFT)
                 {
@@ -912,8 +720,6 @@ int main(int argc, char **argv)
     SDL_DestroyTexture(guiTexture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-
-
     SDL_Quit();
     return 0;
 }
