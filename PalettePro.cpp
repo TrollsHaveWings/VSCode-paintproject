@@ -1,15 +1,16 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_render.h>
 #include <iostream>
 #include <string.h>
 #include <cmath>
 #include <vector>
 #include <sstream>
 #include <functional>
-#include "tinyfiledialogs.h" //external library for native file dialogs
+#include "LIB/tinyfiledialogs.h" //external library for native file dialogs
 
 
-// Compile/Make Command: g++ -std=c++11 -Wall -Wextra -pedantic -o PalettePro PalettePro.cpp -lSDL2 -lSDL2main -lSDL2_image
+// Compile/Make Command: g++ -std=c++11 -Wall -Wextra -pedantic -o PalettePro PalettePro.cpp LIB/tinyfiledialogs.c -lSDL2 -lSDL2main -lSDL2_image
 
 /* --------------------------------DECLARE GLOBAL VARIABLES-------------------------------- */
 
@@ -17,7 +18,9 @@
 int screenScale = 2;
 int screenWidth = 1920/screenScale, screenHeight = 1080/screenScale;
 int guiWidth = 200/screenScale;
-Uint32 *backgrounLayerPixels = nullptr;
+SDL_Renderer *renderer = nullptr;
+SDL_Texture *backgroundLayer = nullptr;
+Uint32 *backgroundLayerPixels = nullptr;
 // Tool Variables
 enum Tool {
     BRUSH,
@@ -57,26 +60,26 @@ void useStrokeWidth(int xCentre, int yCentre)
         {
             for (int xLoop = xCentre - xCurrent + 1; xLoop <= xCentre + xCurrent - 1; xLoop++)
             {
-                backgrounLayerPixels[xLoop + (yCentre + yCurrent) * screenWidth] = 0xFFFFFFFF;
-                backgrounLayerPixels[xLoop + (yCentre - yCurrent) * screenWidth] = 0xFFFFFFFF;
+                backgroundLayerPixels[xLoop + (yCentre + yCurrent) * screenWidth] = 0xFFFFFFFF;
+                backgroundLayerPixels[xLoop + (yCentre - yCurrent) * screenWidth] = 0xFFFFFFFF;
             }
             for (int xLoop = xCentre - yCurrent + 1; xLoop <= xCentre + yCurrent - 1; xLoop++)
             {
-                backgrounLayerPixels[xLoop + (yCentre + xCurrent) * screenWidth] = 0xFFFFFFFF;
-                backgrounLayerPixels[xLoop + (yCentre - xCurrent) * screenWidth] = 0xFFFFFFFF;
+                backgroundLayerPixels[xLoop + (yCentre + xCurrent) * screenWidth] = 0xFFFFFFFF;
+                backgroundLayerPixels[xLoop + (yCentre - xCurrent) * screenWidth] = 0xFFFFFFFF;
             }
         }
         else if (strokeRed != -1)
         {
             for (int xLoop = xCentre - xCurrent + 1; xLoop <= xCentre + xCurrent - 1; xLoop++)
             {
-                backgrounLayerPixels[xLoop + (yCentre + yCurrent) * screenWidth] = strokeColour32;
-                backgrounLayerPixels[xLoop + (yCentre - yCurrent) * screenWidth] = strokeColour32;
+                backgroundLayerPixels[xLoop + (yCentre + yCurrent) * screenWidth] = strokeColour32;
+                backgroundLayerPixels[xLoop + (yCentre - yCurrent) * screenWidth] = strokeColour32;
             }
             for (int xLoop = xCentre - yCurrent + 1; xLoop <= xCentre + yCurrent - 1; xLoop++)
             {
-                backgrounLayerPixels[xLoop + (yCentre + xCurrent) * screenWidth] = strokeColour32;
-                backgrounLayerPixels[xLoop + (yCentre - xCurrent) * screenWidth] = strokeColour32;
+                backgroundLayerPixels[xLoop + (yCentre + xCurrent) * screenWidth] = strokeColour32;
+                backgroundLayerPixels[xLoop + (yCentre - xCurrent) * screenWidth] = strokeColour32;
             }
         }
         if (decisionParameter < 0)
@@ -102,7 +105,7 @@ void drawBrush (int x1, int y1, int x2, int y2, bool isMouseDown)
     if (isMouseDown) {
         if (strokeWidth == 1)
         {
-            backgrounLayerPixels[x2 + y2 * screenWidth] = strokeColour32;
+            backgroundLayerPixels[x2 + y2 * screenWidth] = strokeColour32;
         }
         else
         {
@@ -120,7 +123,7 @@ void eraser (int x1, int y1, int x2, int y2, int isMouseDown)
     {
         if (strokeWidth == 1)
         {
-            backgrounLayerPixels[x2 + y2 * screenWidth] = 0xFFFFFFFF;
+            backgroundLayerPixels[x2 + y2 * screenWidth] = 0xFFFFFFFF;
         }
         else
         {
@@ -149,7 +152,7 @@ void drawLine (int x1, int y1, int x2, int y2, bool isMouseDown)
         {
             if (strokeWidth == 1)
             {
-                backgrounLayerPixels[x1 + y1 * screenWidth] = strokeColour32;
+                backgroundLayerPixels[x1 + y1 * screenWidth] = strokeColour32;
             }
             else
             {
@@ -182,7 +185,7 @@ void drawRect (int x1, int y1, int x2, int y2, bool isMouseDown)
             {
                 for (int yLoop = std::min(y1, y2) ; yLoop <= std::max(y1, y2) ; yLoop++)
                 {
-                    backgrounLayerPixels[xLoop + yLoop * screenWidth] = fillColour32;
+                    backgroundLayerPixels[xLoop + yLoop * screenWidth] = fillColour32;
                 }
             }
         }
@@ -193,13 +196,13 @@ void drawRect (int x1, int y1, int x2, int y2, bool isMouseDown)
             {
                 for (int xLoop = std::min(x1, x2)+strokeLoop ; xLoop <= std::max(x1, x2)-strokeLoop ; xLoop++)
                 {
-                    backgrounLayerPixels[xLoop + (std::min(y1, y2)+strokeLoop) * screenWidth] = strokeColour32;
-                    backgrounLayerPixels[xLoop + (std::max(y1, y2)-strokeLoop) * screenWidth] = strokeColour32;
+                    backgroundLayerPixels[xLoop + (std::min(y1, y2)+strokeLoop) * screenWidth] = strokeColour32;
+                    backgroundLayerPixels[xLoop + (std::max(y1, y2)-strokeLoop) * screenWidth] = strokeColour32;
                 }
                 for (int yLoop = std::min(y1, y2)+strokeLoop ; yLoop <= std::max(y1, y2)-strokeLoop ; yLoop++)
                 {
-                    backgrounLayerPixels[(std::min(x1, x2)+strokeLoop) + yLoop * screenWidth] = strokeColour32;
-                    backgrounLayerPixels[(std::max(x1, x2)-strokeLoop) + yLoop * screenWidth] = strokeColour32;
+                    backgroundLayerPixels[(std::min(x1, x2)+strokeLoop) + yLoop * screenWidth] = strokeColour32;
+                    backgroundLayerPixels[(std::max(x1, x2)-strokeLoop) + yLoop * screenWidth] = strokeColour32;
                 }
             }
         }
@@ -259,8 +262,8 @@ Based upon midpoint ellipse algorithm from https://www.javatpoint.com/computer-g
             int decisionParameter = round(bSquared - (aSquared * yRadius) + (0.25 * aSquared));
             while (xDistance <= yDistance) {
                 for (int xLoop = xCentre - xCurrent; xLoop <= xCentre + xCurrent; xLoop++) {
-                    backgrounLayerPixels[xLoop + (yCentre + yCurrent) * screenWidth] = fillColour32;
-                    backgrounLayerPixels[xLoop + (yCentre - yCurrent) * screenWidth] = fillColour32;
+                    backgroundLayerPixels[xLoop + (yCentre + yCurrent) * screenWidth] = fillColour32;
+                    backgroundLayerPixels[xLoop + (yCentre - yCurrent) * screenWidth] = fillColour32;
                 }
 
                 xCurrent++;
@@ -278,8 +281,8 @@ Based upon midpoint ellipse algorithm from https://www.javatpoint.com/computer-g
             decisionParameter = round(bSquared * (xCurrent + 0.5) * (xCurrent + 0.5) + aSquared * (yCurrent - 1) * (yCurrent - 1) - aSquared * bSquared);
             while (yCurrent >= 0) {
                 for (int xLoop = xCentre - xCurrent; xLoop <= xCentre + xCurrent; xLoop++) {
-                    backgrounLayerPixels[xLoop + (yCentre + yCurrent) * screenWidth] = fillColour32;
-                    backgrounLayerPixels[xLoop + (yCentre - yCurrent) * screenWidth] = fillColour32;
+                    backgroundLayerPixels[xLoop + (yCentre + yCurrent) * screenWidth] = fillColour32;
+                    backgroundLayerPixels[xLoop + (yCentre - yCurrent) * screenWidth] = fillColour32;
                 }
 
                 yCurrent--;
@@ -313,10 +316,10 @@ Based upon midpoint ellipse algorithm from https://www.javatpoint.com/computer-g
             int decisionParameter = round(bSquared - (aSquared * yRadius) + (0.25 * aSquared));
             while (xDistance <= yDistance) {
                 if (strokeWidth == 1) {
-                    backgrounLayerPixels[(xCentre + xCurrent) + (yCentre + yCurrent) * screenWidth] = strokeColour32;
-                    backgrounLayerPixels[(xCentre - xCurrent) + (yCentre + yCurrent) * screenWidth] = strokeColour32;
-                    backgrounLayerPixels[(xCentre + xCurrent) + (yCentre - yCurrent) * screenWidth] = strokeColour32;
-                    backgrounLayerPixels[(xCentre - xCurrent) + (yCentre - yCurrent) * screenWidth] = strokeColour32;
+                    backgroundLayerPixels[(xCentre + xCurrent) + (yCentre + yCurrent) * screenWidth] = strokeColour32;
+                    backgroundLayerPixels[(xCentre - xCurrent) + (yCentre + yCurrent) * screenWidth] = strokeColour32;
+                    backgroundLayerPixels[(xCentre + xCurrent) + (yCentre - yCurrent) * screenWidth] = strokeColour32;
+                    backgroundLayerPixels[(xCentre - xCurrent) + (yCentre - yCurrent) * screenWidth] = strokeColour32;
                 } else {
                     useStrokeWidth((xCentre + xCurrent), (yCentre + yCurrent));
                     useStrokeWidth((xCentre - xCurrent), (yCentre + yCurrent));
@@ -339,10 +342,10 @@ Based upon midpoint ellipse algorithm from https://www.javatpoint.com/computer-g
             decisionParameter = round(bSquared * (xCurrent + 0.5) * (xCurrent + 0.5) + aSquared * (yCurrent - 1) * (yCurrent - 1) - aSquared * bSquared);
             while (yCurrent >= 0) {
                 if (strokeWidth == 1) {
-                    backgrounLayerPixels[(xCentre + xCurrent) + (yCentre + yCurrent) * screenWidth] = strokeColour32;
-                    backgrounLayerPixels[(xCentre - xCurrent) + (yCentre + yCurrent) * screenWidth] = strokeColour32;
-                    backgrounLayerPixels[(xCentre + xCurrent) + (yCentre - yCurrent) * screenWidth] = strokeColour32;
-                    backgrounLayerPixels[(xCentre - xCurrent) + (yCentre - yCurrent) * screenWidth] = strokeColour32;
+                    backgroundLayerPixels[(xCentre + xCurrent) + (yCentre + yCurrent) * screenWidth] = strokeColour32;
+                    backgroundLayerPixels[(xCentre - xCurrent) + (yCentre + yCurrent) * screenWidth] = strokeColour32;
+                    backgroundLayerPixels[(xCentre + xCurrent) + (yCentre - yCurrent) * screenWidth] = strokeColour32;
+                    backgroundLayerPixels[(xCentre - xCurrent) + (yCentre - yCurrent) * screenWidth] = strokeColour32;
                 } else {
                     useStrokeWidth((xCentre + xCurrent), (yCentre + yCurrent));
                     useStrokeWidth((xCentre - xCurrent), (yCentre + yCurrent));
@@ -382,7 +385,7 @@ void bucketFill (int xCurrent, int yCurrent, int isMouseDown)
 
     if (!isMouseDown)
     {
-        Uint32 pixelColour = backgrounLayerPixels[yCurrent * screenWidth + xCurrent];
+        Uint32 pixelColour = backgroundLayerPixels[yCurrent * screenWidth + xCurrent];
 
         if (fillStartColour32 == fillColour32)
         {
@@ -394,7 +397,7 @@ void bucketFill (int xCurrent, int yCurrent, int isMouseDown)
         }
         else
         {
-            backgrounLayerPixels[yCurrent * screenWidth + xCurrent] = fillColour32;
+            backgroundLayerPixels[yCurrent * screenWidth + xCurrent] = fillColour32;
             bucketFill(xCurrent + 1, yCurrent, 0);
             bucketFill(xCurrent - 1, yCurrent, 0);
             bucketFill(xCurrent, yCurrent - 1, 0);
@@ -403,44 +406,94 @@ void bucketFill (int xCurrent, int yCurrent, int isMouseDown)
     }
 }
 
-bool loadImage(Uint32*& backgrounLayerPixels, SDL_Texture* backgroundLayer)
-// Function opens a file dialog for the user to load an image
-{
+#define SDL_USEREVENT_OPEN_FILE SDL_USEREVENT + 1
+
+// This function will be run in a separate thread
+int openFileThread(void* data) {
     const char * filters[5] = { "*.bmp", "*.png", "*.jpg", "*.jpeg", "*.gif" };
-    char const * imageName = tinyfd_openFileDialog(
+    char const * result = tinyfd_openFileDialog(
         "Open Image",  // Dialog title
         "",            // Default file path
-        5,             // Number of filters
+        5,             // Number of file types
         filters,       // Filters
         NULL,          // Description for filters
-        0              // Allow multiple selection
+        1              // Allow multiple selection
     );
 
-    if (!imageName) {
+    if (result != NULL) {
+        // Send a custom event to the main loop
+        SDL_Event event;
+        SDL_zero(event);
+        event.type = SDL_USEREVENT_OPEN_FILE;
+        event.user.data1 = strdup(result);  // Duplicate the string to avoid it being freed prematurely
+        SDL_PushEvent(&event);
+    } else {
         printf("No file was selected.\n");
-        return false;
     }
 
+    return 0;
+}
 
-    SDL_Surface* loadedImage = IMG_Load(imageName);
-    if (loadedImage == nullptr) {
-        printf("error: Could not read file correctly. ====> Please double check the file name and file location of the image you are trying to load and try again.\n Remember FILE NAMES ARE CASE SENSITIVE\n");
-        return false;
+void loadImage() {
+    SDL_Thread* thread = SDL_CreateThread(openFileThread, "OpenFileDialogThread", NULL);
+    if (thread == NULL) {
+        printf("Error: Could not create thread\n");
+    } else {
+        SDL_DetachThread(thread);
     }
 
-    SDL_Surface* convertedImageSurface = SDL_ConvertSurfaceFormat(loadedImage, SDL_PIXELFORMAT_RGBA8888, 0);
-    if (convertedImageSurface == nullptr) {
-        printf("error: Could not convert image surface.\n");
-        return false;
+    // Wait for the file dialog to finish
+    SDL_Event event;
+    while (SDL_WaitEvent(&event)) {
+        if (event.type == SDL_USEREVENT_OPEN_FILE) {
+            char* filePath = static_cast<char*>(event.user.data1);
+
+            // Create a surface from the image then convert it to an RGBA8888 format
+            SDL_Surface* loadedImage = IMG_Load(filePath);
+            if (loadedImage == nullptr) {
+                printf("Error: Could not read file correctly.\n");
+            }
+            SDL_Surface* convertedImageSurface = SDL_ConvertSurfaceFormat(loadedImage, SDL_PIXELFORMAT_RGBA8888, 0);
+            if (convertedImageSurface == nullptr) {
+                printf("Error: Could not convert image surface.\n");
+            }
+
+            // Scale the image to fit the window
+            float scale = std::min(
+                (float)screenWidth / convertedImageSurface->w,
+                (float)screenHeight / convertedImageSurface->h
+            );
+            int newWidth = (int)(convertedImageSurface->w * scale);
+            int newHeight = (int)(convertedImageSurface->h * scale);
+            SDL_Surface* scaledImage = SDL_CreateRGBSurface(0, newWidth, newHeight, 32, 0, 0, 0, 0);
+            SDL_BlitScaled(convertedImageSurface, NULL, scaledImage, NULL);
+
+            // Create a new surface that is the size of the window and fill it with white pixels
+            SDL_Surface* windowSurface = SDL_CreateRGBSurface(0, screenWidth, screenHeight, 32, 0, 0, 0, 0);
+            SDL_FillRect(windowSurface, NULL, SDL_MapRGB(windowSurface->format, 255, 255, 255));
+
+            // Blit the scaled image onto the window surface at the center
+            SDL_Rect dstrect;
+            dstrect.x = (screenWidth - newWidth) / 2;
+            dstrect.y = (screenHeight - newHeight) / 2;
+            SDL_BlitSurface(scaledImage, NULL, windowSurface, &dstrect);
+
+            // Use windowSurface instead of convertedImageSurface
+            backgroundLayerPixels = new Uint32[screenWidth * screenHeight];
+            memcpy(backgroundLayerPixels, windowSurface->pixels, screenWidth * screenHeight * sizeof(Uint32));
+            SDL_UpdateTexture(backgroundLayer, NULL, backgroundLayerPixels, screenWidth * sizeof(Uint32));
+
+            // Clean up
+            SDL_FreeSurface(loadedImage);
+            SDL_FreeSurface(convertedImageSurface);
+            SDL_FreeSurface(scaledImage);
+            SDL_FreeSurface(windowSurface);
+            printf("Image loaded\n");
+
+            free(filePath);  // Free the duplicated string
+            break;
+        }
     }
-
-    backgrounLayerPixels = new Uint32[convertedImageSurface->w * convertedImageSurface->h];
-    memcpy(backgrounLayerPixels, convertedImageSurface->pixels, convertedImageSurface->w * convertedImageSurface->h * sizeof(Uint32));
-    SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, convertedImageSurface->w * sizeof(Uint32));
-
-    SDL_FreeSurface(convertedImageSurface);
-    printf("Image loaded\n");
-    return true;
 }
 
 void handleGUIButtons(int x1, int y1)
@@ -461,11 +514,11 @@ void handleGUIButtons(int x1, int y1)
         {0, 100, 50, 150, [](){ currentTool = CIRCLE; }},
         {50, 100, 100, 150, [](){ currentTool = FILL; }},
 
-        // Image load and save buttons
-        {0, 170, 50, 210, [](){ /* Image load call goes here */ }},
-        {50, 170, 100, 210, [](){ /* Image save call goes here */ }},
+        // Image save and load buttons
+        {0, 170, 50, 210, [](){ /* Image save call goes here */ }},
+        {50, 170, 100, 210, [](){ printf("LOAD IMAGE BUTTON PRESSED\n"); loadImage();}},
 
-        // Stroke width buttons Y = 230 - 250
+        // Stroke width buttons Y = 210 - 230
         {0, 230, 20, 250, [](){ strokeWidth = 1; }},
         {20, 230, 40, 250, [](){ strokeWidth = 3; }},
         {40, 230, 60, 250, [](){ strokeWidth = 5; }},
@@ -574,9 +627,9 @@ int main(int argc, char **argv)
     SDL_GetWindowPosition(window, &mainWindowX, &mainWindowY);
 
     // Creating Blank Canvas
-    backgrounLayerPixels = new Uint32[screenWidth * screenHeight];
-    memset(backgrounLayerPixels, 255, screenWidth * screenHeight * sizeof(Uint32));
-    SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, screenWidth * sizeof(Uint32));
+    backgroundLayerPixels = new Uint32[screenWidth * screenHeight];
+    memset(backgroundLayerPixels, 255, screenWidth * screenHeight * sizeof(Uint32));
+    SDL_UpdateTexture(backgroundLayer, NULL, backgroundLayerPixels, screenWidth * sizeof(Uint32));
     printf ("Blank Canvas Created\n");
 
     // Load GUI
@@ -601,7 +654,7 @@ int main(int argc, char **argv)
 
     while (!quit)
     {
-        SDL_UpdateTexture(backgroundLayer, NULL, backgrounLayerPixels, screenWidth * sizeof(Uint32));
+        SDL_UpdateTexture(backgroundLayer, NULL, backgroundLayerPixels, screenWidth * sizeof(Uint32));
         SDL_WaitEvent(&event);
 
         /* --------------------------------EVENT HANDLER-------------------------------- */
@@ -698,7 +751,7 @@ int main(int argc, char **argv)
 
                     if (currentTool == FILL)
                     {
-                        Uint32 fillStartColour = backgrounLayerPixels[y2 * screenWidth + x2];
+                        Uint32 fillStartColour = backgroundLayerPixels[y2 * screenWidth + x2];
                         fillStartRed = fillStartColour >> 24;
                         fillStartGreen = (fillStartColour >> 16) & 255;
                         fillStartBlue = (fillStartColour >> 8) & 255;
