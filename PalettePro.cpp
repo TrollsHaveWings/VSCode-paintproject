@@ -406,18 +406,106 @@ void bucketFill (int xCurrent, int yCurrent, int isMouseDown)
     }
 }
 
+
+#define SDL_USEREVENT_SAVE_FILE SDL_USEREVENT + 1
+
+int saveFileThread(void* data)
+// This function will be run in a separate thread so the main loop doesn't get blocked and the program doesnt hang
+{
+    char const * result = tinyfd_saveFileDialog(
+        "Save Image",  // Dialog title
+        "",            // Default file path
+        3,             // Number of file types
+        (char const *[]){"*.bmp", "*.jpg", "*.png"},  // Filters
+        NULL           // Description for filters
+    );
+
+    if (result != NULL) {
+        // Send a custom event to the main loop
+        SDL_Event event;
+        SDL_zero(event);
+        event.type = SDL_USEREVENT_SAVE_FILE;
+        event.user.data1 = strdup(result);  // Duplicate the string to avoid it being freed prematurely
+        SDL_PushEvent(&event);
+    } else {
+        printf("No file was selected.\n");
+    }
+
+    return 0;
+}
+
+
+void saveImage() {
+    SDL_Thread* thread = SDL_CreateThread(saveFileThread, "SaveFileDialogThread", NULL);
+    if (thread == NULL) {
+        printf("Error: Could not create thread\n");
+    } else {
+        SDL_DetachThread(thread);
+    }
+
+    // Wait for the file dialog to finish
+    SDL_Event event;
+    while (SDL_WaitEvent(&event)) {
+        if (event.type == SDL_USEREVENT_SAVE_FILE) {
+            char* filePath = static_cast<char*>(event.user.data1);
+
+            // Create an SDL_Surface from backgroundLayerPixels
+            SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
+                backgroundLayerPixels,  // Pixels
+                screenWidth,            // Width
+                screenHeight,           // Height
+                32,                     // Depth
+                screenWidth * 4,        // Pitch
+                0x000000ff,             // Rmask
+                0x0000ff00,             // Gmask
+                0x00ff0000,             // Bmask
+                0xff000000              // Amask
+            );
+            if (surface == nullptr) {
+                printf("Error: Could not create surface.\n");
+                return;
+            }
+
+            const char* extension = strrchr(filePath, '.');
+            if (extension != NULL) {
+                if (strcmp(extension, ".bmp") == 0) {
+                    SDL_SaveBMP(surface, filePath);
+                } else if (strcmp(extension, ".jpg") == 0 || strcmp(extension, ".jpeg") == 0) {
+                    IMG_SaveJPG(surface, filePath, 100);
+                } else if (strcmp(extension, ".png") == 0) {
+                    IMG_SavePNG(surface, filePath);
+                } else {
+                    printf("Error: Unsupported file format.\n");
+                }
+            } else {
+                printf("Error: Could not determine file format.\n");
+            }
+
+
+            // Clean up
+            SDL_FreeSurface(surface);
+            free(filePath);  // Free the duplicated string
+            break;
+        }
+    }
+}
+
+
 #define SDL_USEREVENT_OPEN_FILE SDL_USEREVENT + 1
 
-// This function will be run in a separate thread
-int openFileThread(void* data) {
-    const char * filters[5] = { "*.bmp", "*.png", "*.jpg", "*.jpeg", "*.gif" };
+
+int openFileThread(void* data)
+// This function will be run in a separate thread so the main loop doesn't get blocked and the program doesnt hang
+{
+    const char * filters[14] = { "*.bmp", "*.gif", "*.jpg", "*.jpeg", "*.lbm", "*.pcx",
+    "*.png", "*.pnm", "*.tga", "*.tif", "*.webp", "*.xcf", "*.xpm", "*.xv" };
     char const * result = tinyfd_openFileDialog(
         "Open Image",  // Dialog title
         "",            // Default file path
-        5,             // Number of file types
+        14,            // Number of file types
         filters,       // Filters
         NULL,          // Description for filters
-        1              // Allow multiple selection
+        0              // DO NOTllow multiple selection
     );
 
     if (result != NULL) {
@@ -434,6 +522,7 @@ int openFileThread(void* data) {
     return 0;
 }
 
+
 void loadImage() {
     SDL_Thread* thread = SDL_CreateThread(openFileThread, "OpenFileDialogThread", NULL);
     if (thread == NULL) {
@@ -442,52 +531,47 @@ void loadImage() {
         SDL_DetachThread(thread);
     }
 
+    // Initialize backgroundLayerPixels to white
+    backgroundLayerPixels = new Uint32[screenWidth * screenHeight];
+    memset(backgroundLayerPixels, 255, screenWidth * screenHeight * sizeof(Uint32));
+
     // Wait for the file dialog to finish
     SDL_Event event;
     while (SDL_WaitEvent(&event)) {
         if (event.type == SDL_USEREVENT_OPEN_FILE) {
             char* filePath = static_cast<char*>(event.user.data1);
 
-            // Create a surface from the image then convert it to an RGBA8888 format
+            // Load the image and convert it to the SDL_PIXELFORMAT_RGBA8888 format
             SDL_Surface* loadedImage = IMG_Load(filePath);
             if (loadedImage == nullptr) {
                 printf("Error: Could not read file correctly.\n");
             }
-            SDL_Surface* convertedImageSurface = SDL_ConvertSurfaceFormat(loadedImage, SDL_PIXELFORMAT_RGBA8888, 0);
-            if (convertedImageSurface == nullptr) {
-                printf("Error: Could not convert image surface.\n");
-            }
 
             // Scale the image to fit the window
             float scale = std::min(
-                (float)screenWidth / convertedImageSurface->w,
-                (float)screenHeight / convertedImageSurface->h
+                (float)screenWidth / loadedImage->w,
+                (float)screenHeight / loadedImage->h
             );
-            int newWidth = (int)(convertedImageSurface->w * scale);
-            int newHeight = (int)(convertedImageSurface->h * scale);
-            SDL_Surface* scaledImage = SDL_CreateRGBSurface(0, newWidth, newHeight, 32, 0, 0, 0, 0);
-            SDL_BlitScaled(convertedImageSurface, NULL, scaledImage, NULL);
+            int newWidth = (int)(loadedImage->w * scale);
+            int newHeight = (int)(loadedImage->h * scale);
+            SDL_Surface* scaledImage = SDL_CreateRGBSurfaceWithFormat(0, newWidth, newHeight, 32, SDL_PIXELFORMAT_RGBA8888);
+            SDL_BlitScaled(loadedImage, NULL, scaledImage, NULL);
 
-            // Create a new surface that is the size of the window and fill it with white pixels
-            SDL_Surface* windowSurface = SDL_CreateRGBSurface(0, screenWidth, screenHeight, 32, 0, 0, 0, 0);
-            SDL_FillRect(windowSurface, NULL, SDL_MapRGB(windowSurface->format, 255, 255, 255));
+            // Blit the scaled image onto the backgroundLayerPixels at the center
+            int startX = (screenWidth - newWidth) / 2;
+            int startY = (screenHeight - newHeight) / 2;
+            for (int y = 0; y < newHeight; y++) {
+                for (int x = 0; x < newWidth; x++) {
+                    Uint32* pixel = (Uint32*)scaledImage->pixels + y * scaledImage->pitch / 4 + x;
+                    backgroundLayerPixels[(startY + y) * screenWidth + startX + x] = *pixel;
+                }
+            }
 
-            // Blit the scaled image onto the window surface at the center
-            SDL_Rect dstrect;
-            dstrect.x = (screenWidth - newWidth) / 2;
-            dstrect.y = (screenHeight - newHeight) / 2;
-            SDL_BlitSurface(scaledImage, NULL, windowSurface, &dstrect);
-
-            // Use windowSurface instead of convertedImageSurface
-            backgroundLayerPixels = new Uint32[screenWidth * screenHeight];
-            memcpy(backgroundLayerPixels, windowSurface->pixels, screenWidth * screenHeight * sizeof(Uint32));
             SDL_UpdateTexture(backgroundLayer, NULL, backgroundLayerPixels, screenWidth * sizeof(Uint32));
 
             // Clean up
             SDL_FreeSurface(loadedImage);
-            SDL_FreeSurface(convertedImageSurface);
             SDL_FreeSurface(scaledImage);
-            SDL_FreeSurface(windowSurface);
             printf("Image loaded\n");
 
             free(filePath);  // Free the duplicated string
@@ -495,6 +579,7 @@ void loadImage() {
         }
     }
 }
+
 
 void handleGUIButtons(int x1, int y1)
 // Function to handle the buttons on the GUI
@@ -515,7 +600,7 @@ void handleGUIButtons(int x1, int y1)
         {50, 100, 100, 150, [](){ currentTool = FILL; }},
 
         // Image save and load buttons
-        {0, 170, 50, 210, [](){ /* Image save call goes here */ }},
+        {0, 170, 50, 210, [](){ printf("SAVE IMAGE BUTTON PRESSED\n");}},
         {50, 170, 100, 210, [](){ printf("LOAD IMAGE BUTTON PRESSED\n"); loadImage();}},
 
         // Stroke width buttons Y = 210 - 230
@@ -622,8 +707,7 @@ int main(int argc, char **argv)
     SDL_Window *window = SDL_CreateWindow("BRUSH SELECTED, STROKE WIDTH 1, STROKE COLOUR (255,255,255), FILL COLOUR (-1, -1, -1)",
         SDL_WINDOWPOS_UNDEFINED, 30, screenWidth, screenHeight, SDL_WINDOW_ALLOW_HIGHDPI);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
-    SDL_Texture *backgroundLayer = SDL_CreateTexture(renderer,
-        SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, screenWidth, screenHeight);
+    SDL_Texture *backgroundLayer = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, screenWidth, screenHeight);
     SDL_GetWindowPosition(window, &mainWindowX, &mainWindowY);
 
     // Creating Blank Canvas
@@ -724,7 +808,7 @@ int main(int argc, char **argv)
                             break;
                         }
                         ss << toolName << " SELECTED, STROKE WIDTH " << strokeWidth << ", STROKE COLOUR (" << strokeRed << "," << strokeGreen << "," << strokeBlue << "), FILL COLOUR (" << fillRed << "," << fillGreen << "," << fillBlue << ")"; 
-                    SDL_SetWindowTitle(window, ss.str().c_str());
+                        SDL_SetWindowTitle(window, ss.str().c_str());
                 }
             break;
             case SDL_MOUSEMOTION:
