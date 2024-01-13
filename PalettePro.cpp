@@ -8,15 +8,11 @@
 #include <vector>
 #include <sstream>
 #include <functional>
-<<<<<<< HEAD
-#include "src/tinyfiledialogs.h" //external library for native file dialogs
-=======
 // INCLUDE EXTERNAL LIBRARIES
 #include "src/tinyfiledialogs.h" //external library for prompting the user with file dialogs
 
 //FIXME: Add a function to allow the user to draw a line using rubber banding when mouse button down
 //FIXME: when the user closes the file dialog without selecting a file, the program stops working - fix this
->>>>>>> staging
 
 // Compile/Make Command: g++ -std=c++11 -Wall -Wextra -pedantic -o PalettePro PalettePro.cpp src/tinyfiledialogs.c -lSDL2 -lSDL2main -lSDL2_image
 
@@ -415,8 +411,6 @@ void bucketFill (int xCurrent, int yCurrent, int isMouseDown)
 }
 
 
-<<<<<<< HEAD
-=======
 #define SDL_USEREVENT_SAVE_FILE SDL_USEREVENT + 1
 
 int saveFileThread(void* data)
@@ -501,7 +495,6 @@ void saveImage() {
     }
 }
 
->>>>>>> staging
 
 #define SDL_USEREVENT_OPEN_FILE SDL_USEREVENT + 1
 
@@ -612,13 +605,8 @@ void handleGUIButtons(int x1, int y1)
         {50, 100, 100, 150, [](){ currentTool = FILL; }},
 
         // Image save and load buttons
-<<<<<<< HEAD
-        {0, 170, 50, 210, [](){printf("SAVE IMAGE BUTTON PRESSED\n");}},
-        {50, 170, 100, 210, [](){printf("LOAD IMAGE BUTTON PRESSED\n"); loadImage();}},
-=======
         {0, 170, 50, 210, [](){ printf("SAVE IMAGE BUTTON PRESSED\n"); saveImage();}},
         {50, 170, 100, 210, [](){ printf("LOAD IMAGE BUTTON PRESSED\n"); loadImage();}},
->>>>>>> staging
 
         // Stroke width buttons Y = 210 - 230
         {0, 230, 20, 250, [](){ strokeWidth = 1; }},
