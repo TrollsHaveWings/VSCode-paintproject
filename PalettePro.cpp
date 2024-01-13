@@ -1,8 +1,6 @@
-// INCLUDE SDL2 LIBRARIES
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_render.h>
-// INCLUDE C++ LIBRARIES
 #include <iostream>
 #include <string.h>
 #include <cmath>
@@ -14,7 +12,6 @@
 
 //FIXME: Add a function to allow the user to draw a line using rubber banding when mouse button down
 //FIXME: when the user closes the file dialog without selecting a file, the program stops working - fix this
-
 
 // Compile/Make Command: g++ -std=c++11 -Wall -Wextra -pedantic -o PalettePro PalettePro.cpp src/tinyfiledialogs.c -lSDL2 -lSDL2main -lSDL2_image
 
@@ -601,10 +598,10 @@ void handleGUIButtons(int x1, int y1)
         // Tool selection buttons
         {0, 0, 50, 50, [](){ currentTool = BRUSH; }},
         {50, 0, 100, 50, [](){ currentTool = ERASER; }},
-        {0, 50, 50, 100, [](){ currentTool = FILL; }},
-        {50, 50, 100, 100, [](){ currentTool = LINE; }},
+        {0, 50, 50, 100, [](){ currentTool = LINE; }},
+        {50, 50, 100, 100, [](){ currentTool = RECTANGLE; }},
         {0, 100, 50, 150, [](){ currentTool = CIRCLE; }},
-        {50, 100, 100, 150, [](){ currentTool = RECTANGLE; }},
+        {50, 100, 100, 150, [](){ currentTool = FILL; }},
 
         // Image save and load buttons
         {0, 170, 50, 210, [](){ printf("SAVE IMAGE BUTTON PRESSED\n"); saveImage();}},
@@ -620,46 +617,46 @@ void handleGUIButtons(int x1, int y1)
         // --- Stroke colour buttons ---
         // Stroke color buttons Y= 285 - 305
         {0, 285, 25, 305, [](){ strokeRed = -1; strokeGreen = -1; strokeBlue = -1; }},
-        {25, 285, 50, 305, [](){ strokeRed = 245; strokeGreen = 245; strokeBlue = 245; }},
-        {50, 285, 75, 305, [](){ strokeRed = 102; strokeGreen = 106; strokeBlue = 109; }},
-        {75, 285, 100, 305, [](){ strokeRed = 17; strokeGreen = 17; strokeBlue = 17; }},
+        {25, 285, 50, 305, [](){ strokeRed = 255; strokeGreen = 255; strokeBlue = 255; }},
+        {50, 285, 75, 305, [](){ strokeRed = 0; strokeGreen = 0; strokeBlue = 0; }},
+        {75, 285, 100, 305, [](){ strokeRed = 255; strokeGreen = 0; strokeBlue = 0; }},
         // Stroke color buttons Y = 310 - 330
-        {0, 310, 25, 330, [](){ strokeRed = 255; strokeGreen = 105; strokeBlue = 97; }},
-        {25, 310, 50, 330, [](){ strokeRed = 255; strokeGreen = 179; strokeBlue = 78; }},
-        {50, 310, 75, 330, [](){ strokeRed = 255; strokeGreen = 193; strokeBlue = 113; }},
-        {75, 310, 100, 330, [](){ strokeRed = 248; strokeGreen = 243; strokeBlue = 141; }},
+        {0, 310, 25, 330, [](){ strokeRed = 0; strokeGreen = 255; strokeBlue = 0; }},
+        {25, 310, 50, 330, [](){ strokeRed = 0; strokeGreen = 0; strokeBlue = 255; }},
+        {50, 310, 75, 330, [](){ strokeRed = 255; strokeGreen = 255; strokeBlue = 0; }},
+        {75, 310, 100, 330, [](){ strokeRed = 255; strokeGreen = 0; strokeBlue = 255; }},
         // Stroke color buttons Y = 335 - 355
-        {0, 335, 25, 355, [](){ strokeRed = 44; strokeGreen = 129; strokeBlue = 96; }},
-        {25, 335, 50, 355, [](){ strokeRed = 83; strokeGreen = 154; strokeBlue = 119; }},
-        {50, 335, 75, 355, [](){ strokeRed = 113; strokeGreen = 188; strokeBlue = 120; }},
-        {75, 335, 100, 355, [](){ strokeRed = 53; strokeGreen = 202; strokeBlue = 197; }},
+        {0, 335, 25, 355, [](){ strokeRed = 0; strokeGreen = 255; strokeBlue = 255; }},
+        {25, 335, 50, 355, [](){ strokeRed = 255; strokeGreen = 255; strokeBlue = 255; }},
+        {50, 335, 75, 355, [](){ strokeRed = 128; strokeGreen = 128; strokeBlue = 128; }},
+        {75, 335, 100, 355, [](){ strokeRed = 128; strokeGreen = 0; strokeBlue = 0; }},
         // Stroke color buttons Y = 360 - 380
-        {0, 360, 25, 380, [](){ strokeRed = 60; strokeGreen = 91; strokeBlue = 135; }},
-        {25, 360, 50, 380, [](){ strokeRed = 95; strokeGreen = 154; strokeBlue = 205; }},
-        {50, 360, 75, 380, [](){ strokeRed = 157; strokeGreen = 148; strokeBlue = 255; }},
-        {75, 360, 100, 380, [](){ strokeRed = 199; strokeGreen = 128; strokeBlue = 232; }},
+        {0, 360, 25, 380, [](){ strokeRed = 128; strokeGreen = 128; strokeBlue = 0; }},
+        {25, 360, 50, 380, [](){ strokeRed = 0; strokeGreen = 128; strokeBlue = 0; }},
+        {50, 360, 75, 380, [](){ strokeRed = 128; strokeGreen = 0; strokeBlue = 128; }},
+        {75, 360, 100, 380, [](){ strokeRed = 0; strokeGreen = 128; strokeBlue = 128; }},
 
         // --- Fill colour buttons ---
         // Fill color buttons Y= 420 - 440
         {0, 420, 25, 440, [](){ fillRed = -1; fillGreen = -1; fillBlue = -1; }},
-        {25, 420, 50, 440, [](){ fillRed = 245; fillGreen = 245; fillBlue = 245; }},
-        {50, 420, 75, 440, [](){ fillRed = 102; fillGreen = 106; fillBlue = 109; }},
-        {75, 420, 100, 440, [](){ fillRed = 17; fillGreen = 17; fillBlue = 17; }},
+        {25, 420, 50, 440, [](){ fillRed = 255; fillGreen = 255; fillBlue = 255; }},
+        {50, 420, 75, 440, [](){ fillRed = 0; fillGreen = 0; fillBlue = 0; }},
+        {75, 420, 100, 440, [](){ fillRed = 255; fillGreen = 0; fillBlue = 0; }},
         // Fill color buttons Y = 445 - 465
-        {0, 445, 25, 465, [](){ fillRed = 255; fillGreen = 105; fillBlue = 97; }},
-        {25, 445, 50, 465, [](){ fillRed = 255; fillGreen = 179; fillBlue = 78; }},
-        {50, 445, 75, 465, [](){ fillRed = 255; fillGreen = 193; fillBlue = 113; }},
-        {75, 445, 100, 465, [](){ fillRed = 248; fillGreen = 243; fillBlue = 141; }},
+        {0, 445, 25, 465, [](){ fillRed = 0; fillGreen = 255; fillBlue = 0; }},
+        {25, 445, 50, 465, [](){ fillRed = 0; fillGreen = 0; fillBlue = 255; }},
+        {50, 445, 75, 465, [](){ fillRed = 255; fillGreen = 255; fillBlue = 0; }},
+        {75, 445, 100, 465, [](){ fillRed = 255; fillGreen = 0; fillBlue = 255; }},
         // Fill color buttons Y = 470 - 490
-        {0, 470, 25, 490, [](){ fillRed = 44; fillGreen = 129; fillBlue = 96; }},
-        {25, 470, 50, 490, [](){ fillRed = 83; fillGreen = 154; fillBlue = 119; }},
-        {50, 470, 75, 490, [](){ fillRed = 113; fillGreen = 188; fillBlue = 120; }},
-        {75, 470, 100, 490, [](){ fillRed = 53; fillGreen = 202; fillBlue = 197; }},
+        {0, 470, 25, 490, [](){ fillRed = 0; fillGreen = 255; fillBlue = 255; }},
+        {25, 470, 50, 490, [](){ fillRed = 255; fillGreen = 255; fillBlue = 255; }},
+        {50, 470, 75, 490, [](){ fillRed = 128; fillGreen = 128; fillBlue = 128; }},
+        {75, 470, 100, 490, [](){ fillRed = 128; fillGreen = 0; fillBlue = 0; }},
         // Fill color buttons Y = 495 - 515
-        {0, 495, 25, 515, [](){ fillRed = 60; fillGreen = 91; fillBlue = 135; }},
-        {25, 495, 50, 515, [](){ fillRed = 95; fillGreen = 154; fillBlue = 205; }},
-        {50, 495, 75, 515, [](){ fillRed = 157; fillGreen = 148; fillBlue = 255; }},
-        {75, 495, 100, 515, [](){ fillRed = 199; fillGreen = 128; fillBlue = 232; }},
+        {0, 495, 25, 515, [](){ fillRed = 128; fillGreen = 128; fillBlue = 0; }},
+        {25, 495, 50, 515, [](){ fillRed = 0; fillGreen = 128; fillBlue = 0; }},
+        {50, 495, 75, 515, [](){ fillRed = 128; fillGreen = 0; fillBlue = 128; }},
+        {75, 495, 100, 515, [](){ fillRed = 0; fillGreen = 128; fillBlue = 128; }},
     };
 
     for (const Button& button : buttons) {
