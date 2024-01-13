@@ -117,7 +117,7 @@ void drawBrush (int x1, int y1, int x2, int y2, bool isMouseDown)
 }
 
 
-void eraser (int x1, int y1, int x2, int y2, int isMouseDown)
+void eraser (int x1, int y1, int x2, int y2, bool isMouseDown)
 //Function for erasing a single pixel or calling the useStrokeWidth function when the left mouse button is held down.
 {
     if (isMouseDown)
@@ -370,7 +370,7 @@ Based upon midpoint ellipse algorithm from https://www.javatpoint.com/computer-g
 }
 
 
-void bucketFill (int xCurrent, int yCurrent, int isMouseDown)
+void bucketFill (int xCurrent, int yCurrent, bool isMouseDown)
 // Function for filling an area with the fillColour using 4-point approach outlined in Eike's lecture - may struggle with very large areas
 {
     uint32_t fillColour32 = 0;
@@ -838,7 +838,7 @@ int main(int argc, char **argv)
                     if (y2 > 5 && y2 <= (screenHeight - 5) && x2 >= (guiWidth + 5) && x2 <= (screenWidth - 5))
                     {
                         drawing = true;
-                        handleToolAction(x1, y1, x2, y2, 1, drawing);
+                        handleToolAction(x1, y1, x2, y2, true, drawing);
                     }
                     else
                     {
@@ -860,7 +860,7 @@ int main(int argc, char **argv)
                         fillStartBlue = (fillStartColour >> 8) & 255;
                         fillStartAlpha = fillStartColour & 255;
                     }
-                    handleToolAction(x1, y1, x2, y2, 0, drawing);
+                    handleToolAction(x1, y1, x2, y2, false, drawing);
                     }
                 }
                 break;
