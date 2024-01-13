@@ -412,6 +412,7 @@ void bucketFill (int xCurrent, int yCurrent, int isMouseDown)
 
 
 #define SDL_USEREVENT_SAVE_FILE SDL_USEREVENT + 1
+#define SDL_USEREVENT_FILE_DIALOG_CLOSED SDL_USEREVENT + 2
 
 int saveFileThread(void* data)
 // This function will be run in a separate thread so the main loop doesn't get blocked and the program doesnt hang
@@ -434,6 +435,12 @@ int saveFileThread(void* data)
         SDL_PushEvent(&event);
     } else {
         printf("No file was selected.\n");
+
+        // Send a custom event to the main loop
+        SDL_Event event;
+        SDL_zero(event);
+        event.type = SDL_USEREVENT_FILE_DIALOG_CLOSED;
+        SDL_PushEvent(&event);
     }
 
     return 0;
@@ -491,6 +498,8 @@ void saveImage() {
             SDL_FreeSurface(surface);
             free(filePath);  // Free the duplicated string
             break;
+        } else if (event.type == SDL_USEREVENT_FILE_DIALOG_CLOSED) {
+            break;
         }
     }
 }
@@ -522,6 +531,12 @@ int openFileThread(void* data)
         SDL_PushEvent(&event);
     } else {
         printf("No file was selected.\n");
+
+        // Send a custom event to the main loop
+        SDL_Event event;
+        SDL_zero(event);
+        event.type = SDL_USEREVENT_FILE_DIALOG_CLOSED;
+        SDL_PushEvent(&event);
     }
 
     return 0;
@@ -580,6 +595,8 @@ void loadImage() {
             printf("Image loaded\n");
 
             free(filePath);  // Free the duplicated string
+            break;
+        } else if (event.type == SDL_USEREVENT_FILE_DIALOG_CLOSED) {
             break;
         }
     }
