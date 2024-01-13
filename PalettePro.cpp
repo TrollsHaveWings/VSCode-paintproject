@@ -1,14 +1,24 @@
+// INCLUDE SDL2 LIBRARIES
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_render.h>
+// INCLUDE C++ LIBRARIES
 #include <iostream>
 #include <string.h>
 #include <cmath>
 #include <vector>
 #include <sstream>
 #include <functional>
+<<<<<<< HEAD
 #include "src/tinyfiledialogs.h" //external library for native file dialogs
+=======
+// INCLUDE EXTERNAL LIBRARIES
+#include "src/tinyfiledialogs.h" //external library for prompting the user with file dialogs
+
+//FIXME: Add a function to allow the user to draw a line using rubber banding when mouse button down
+//FIXME: when the user closes the file dialog without selecting a file, the program stops working - fix this
+>>>>>>> staging
 
 
 // Compile/Make Command: g++ -std=c++11 -Wall -Wextra -pedantic -o PalettePro PalettePro.cpp src/tinyfiledialogs.c -lSDL2 -lSDL2main -lSDL2_image
@@ -408,6 +418,93 @@ void bucketFill (int xCurrent, int yCurrent, int isMouseDown)
 }
 
 
+<<<<<<< HEAD
+=======
+#define SDL_USEREVENT_SAVE_FILE SDL_USEREVENT + 1
+
+int saveFileThread(void* data)
+// This function will be run in a separate thread so the main loop doesn't get blocked and the program doesnt hang
+{
+    char const * filters[] = {"*.bmp", "*.jpg", "*.png"};
+    char const * result = tinyfd_saveFileDialog(
+        "Save Image",  // Dialog title
+        "",            // Default file path
+        3,             // Number of file types
+        filters,       // Filters
+        NULL           // Description for filters
+    );
+
+    if (result != NULL) {
+        // Send a custom event to the main loop
+        SDL_Event event;
+        SDL_zero(event);
+        event.type = SDL_USEREVENT_SAVE_FILE;
+        event.user.data1 = strdup(result);  // Duplicate the string to avoid it being freed prematurely
+        SDL_PushEvent(&event);
+    } else {
+        printf("No file was selected.\n");
+    }
+
+    return 0;
+}
+
+
+void saveImage() {
+    SDL_Thread * thread = SDL_CreateThread(saveFileThread, "SaveFileDialogThread", NULL);
+    if (thread == NULL) {
+        printf("Error: Could not create thread\n");
+    } else {
+        SDL_DetachThread(thread);
+    }
+
+    // Wait for the file dialog to finish
+    SDL_Event event;
+    while (SDL_WaitEvent(&event)) {
+        if (event.type == SDL_USEREVENT_SAVE_FILE) {
+            char* filePath = static_cast<char*>(event.user.data1);
+
+            // Create an SDL_Surface from backgroundLayerPixels
+            SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
+                backgroundLayerPixels,  // Pixels
+                screenWidth,            // Width
+                screenHeight,           // Height
+                32,                     // Depth
+                screenWidth * 4,        // Pitch
+                0xff000000,             // Rmask
+                0x00ff0000,             // Gmask
+                0x0000ff00,             // Bmask
+                0x000000ff              // Amask
+            );
+            if (surface == nullptr) {
+                printf("Error: Could not create surface.\n");
+                return;
+            }
+
+            const char* extension = strrchr(filePath, '.');
+            if (extension != NULL) {
+                if (strcmp(extension, ".bmp") == 0) {
+                    SDL_SaveBMP(surface, filePath);
+                } else if (strcmp(extension, ".jpg") == 0 || strcmp(extension, ".jpeg") == 0) {
+                    IMG_SaveJPG(surface, filePath, 100);
+                } else if (strcmp(extension, ".png") == 0) {
+                    IMG_SavePNG(surface, filePath);
+                } else {
+                    printf("Error: Unsupported file format.\n");
+                }
+            } else {
+                printf("Error: Could not determine file format.\n");
+            }
+
+
+            // Clean up
+            SDL_FreeSurface(surface);
+            free(filePath);  // Free the duplicated string
+            break;
+        }
+    }
+}
+
+>>>>>>> staging
 
 #define SDL_USEREVENT_OPEN_FILE SDL_USEREVENT + 1
 
@@ -512,14 +609,19 @@ void handleGUIButtons(int x1, int y1)
         // Tool selection buttons
         {0, 0, 50, 50, [](){ currentTool = BRUSH; }},
         {50, 0, 100, 50, [](){ currentTool = ERASER; }},
-        {0, 50, 50, 100, [](){ currentTool = LINE; }},
-        {50, 50, 100, 100, [](){ currentTool = RECTANGLE; }},
+        {0, 50, 50, 100, [](){ currentTool = FILL; }},
+        {50, 50, 100, 100, [](){ currentTool = LINE; }},
         {0, 100, 50, 150, [](){ currentTool = CIRCLE; }},
-        {50, 100, 100, 150, [](){ currentTool = FILL; }},
+        {50, 100, 100, 150, [](){ currentTool = RECTANGLE; }},
 
         // Image save and load buttons
+<<<<<<< HEAD
         {0, 170, 50, 210, [](){printf("SAVE IMAGE BUTTON PRESSED\n");}},
         {50, 170, 100, 210, [](){printf("LOAD IMAGE BUTTON PRESSED\n"); loadImage();}},
+=======
+        {0, 170, 50, 210, [](){ printf("SAVE IMAGE BUTTON PRESSED\n"); saveImage();}},
+        {50, 170, 100, 210, [](){ printf("LOAD IMAGE BUTTON PRESSED\n"); loadImage();}},
+>>>>>>> staging
 
         // Stroke width buttons Y = 210 - 230
         {0, 230, 20, 250, [](){ strokeWidth = 1; }},
@@ -531,46 +633,46 @@ void handleGUIButtons(int x1, int y1)
         // --- Stroke colour buttons ---
         // Stroke color buttons Y= 285 - 305
         {0, 285, 25, 305, [](){ strokeRed = -1; strokeGreen = -1; strokeBlue = -1; }},
-        {25, 285, 50, 305, [](){ strokeRed = 255; strokeGreen = 255; strokeBlue = 255; }},
-        {50, 285, 75, 305, [](){ strokeRed = 0; strokeGreen = 0; strokeBlue = 0; }},
-        {75, 285, 100, 305, [](){ strokeRed = 255; strokeGreen = 0; strokeBlue = 0; }},
+        {25, 285, 50, 305, [](){ strokeRed = 245; strokeGreen = 245; strokeBlue = 245; }},
+        {50, 285, 75, 305, [](){ strokeRed = 102; strokeGreen = 106; strokeBlue = 109; }},
+        {75, 285, 100, 305, [](){ strokeRed = 17; strokeGreen = 17; strokeBlue = 17; }},
         // Stroke color buttons Y = 310 - 330
-        {0, 310, 25, 330, [](){ strokeRed = 0; strokeGreen = 255; strokeBlue = 0; }},
-        {25, 310, 50, 330, [](){ strokeRed = 0; strokeGreen = 0; strokeBlue = 255; }},
-        {50, 310, 75, 330, [](){ strokeRed = 255; strokeGreen = 255; strokeBlue = 0; }},
-        {75, 310, 100, 330, [](){ strokeRed = 255; strokeGreen = 0; strokeBlue = 255; }},
+        {0, 310, 25, 330, [](){ strokeRed = 255; strokeGreen = 105; strokeBlue = 97; }},
+        {25, 310, 50, 330, [](){ strokeRed = 255; strokeGreen = 179; strokeBlue = 78; }},
+        {50, 310, 75, 330, [](){ strokeRed = 255; strokeGreen = 193; strokeBlue = 113; }},
+        {75, 310, 100, 330, [](){ strokeRed = 248; strokeGreen = 243; strokeBlue = 141; }},
         // Stroke color buttons Y = 335 - 355
-        {0, 335, 25, 355, [](){ strokeRed = 0; strokeGreen = 255; strokeBlue = 255; }},
-        {25, 335, 50, 355, [](){ strokeRed = 255; strokeGreen = 255; strokeBlue = 255; }},
-        {50, 335, 75, 355, [](){ strokeRed = 128; strokeGreen = 128; strokeBlue = 128; }},
-        {75, 335, 100, 355, [](){ strokeRed = 128; strokeGreen = 0; strokeBlue = 0; }},
+        {0, 335, 25, 355, [](){ strokeRed = 44; strokeGreen = 129; strokeBlue = 96; }},
+        {25, 335, 50, 355, [](){ strokeRed = 83; strokeGreen = 154; strokeBlue = 119; }},
+        {50, 335, 75, 355, [](){ strokeRed = 113; strokeGreen = 188; strokeBlue = 120; }},
+        {75, 335, 100, 355, [](){ strokeRed = 53; strokeGreen = 202; strokeBlue = 197; }},
         // Stroke color buttons Y = 360 - 380
-        {0, 360, 25, 380, [](){ strokeRed = 128; strokeGreen = 128; strokeBlue = 0; }},
-        {25, 360, 50, 380, [](){ strokeRed = 0; strokeGreen = 128; strokeBlue = 0; }},
-        {50, 360, 75, 380, [](){ strokeRed = 128; strokeGreen = 0; strokeBlue = 128; }},
-        {75, 360, 100, 380, [](){ strokeRed = 0; strokeGreen = 128; strokeBlue = 128; }},
+        {0, 360, 25, 380, [](){ strokeRed = 60; strokeGreen = 91; strokeBlue = 135; }},
+        {25, 360, 50, 380, [](){ strokeRed = 95; strokeGreen = 154; strokeBlue = 205; }},
+        {50, 360, 75, 380, [](){ strokeRed = 157; strokeGreen = 148; strokeBlue = 255; }},
+        {75, 360, 100, 380, [](){ strokeRed = 199; strokeGreen = 128; strokeBlue = 232; }},
 
         // --- Fill colour buttons ---
         // Fill color buttons Y= 420 - 440
         {0, 420, 25, 440, [](){ fillRed = -1; fillGreen = -1; fillBlue = -1; }},
-        {25, 420, 50, 440, [](){ fillRed = 255; fillGreen = 255; fillBlue = 255; }},
-        {50, 420, 75, 440, [](){ fillRed = 0; fillGreen = 0; fillBlue = 0; }},
-        {75, 420, 100, 440, [](){ fillRed = 255; fillGreen = 0; fillBlue = 0; }},
+        {25, 420, 50, 440, [](){ fillRed = 245; fillGreen = 245; fillBlue = 245; }},
+        {50, 420, 75, 440, [](){ fillRed = 102; fillGreen = 106; fillBlue = 109; }},
+        {75, 420, 100, 440, [](){ fillRed = 17; fillGreen = 17; fillBlue = 17; }},
         // Fill color buttons Y = 445 - 465
-        {0, 445, 25, 465, [](){ fillRed = 0; fillGreen = 255; fillBlue = 0; }},
-        {25, 445, 50, 465, [](){ fillRed = 0; fillGreen = 0; fillBlue = 255; }},
-        {50, 445, 75, 465, [](){ fillRed = 255; fillGreen = 255; fillBlue = 0; }},
-        {75, 445, 100, 465, [](){ fillRed = 255; fillGreen = 0; fillBlue = 255; }},
+        {0, 445, 25, 465, [](){ fillRed = 255; fillGreen = 105; fillBlue = 97; }},
+        {25, 445, 50, 465, [](){ fillRed = 255; fillGreen = 179; fillBlue = 78; }},
+        {50, 445, 75, 465, [](){ fillRed = 255; fillGreen = 193; fillBlue = 113; }},
+        {75, 445, 100, 465, [](){ fillRed = 248; fillGreen = 243; fillBlue = 141; }},
         // Fill color buttons Y = 470 - 490
-        {0, 470, 25, 490, [](){ fillRed = 0; fillGreen = 255; fillBlue = 255; }},
-        {25, 470, 50, 490, [](){ fillRed = 255; fillGreen = 255; fillBlue = 255; }},
-        {50, 470, 75, 490, [](){ fillRed = 128; fillGreen = 128; fillBlue = 128; }},
-        {75, 470, 100, 490, [](){ fillRed = 128; fillGreen = 0; fillBlue = 0; }},
+        {0, 470, 25, 490, [](){ fillRed = 44; fillGreen = 129; fillBlue = 96; }},
+        {25, 470, 50, 490, [](){ fillRed = 83; fillGreen = 154; fillBlue = 119; }},
+        {50, 470, 75, 490, [](){ fillRed = 113; fillGreen = 188; fillBlue = 120; }},
+        {75, 470, 100, 490, [](){ fillRed = 53; fillGreen = 202; fillBlue = 197; }},
         // Fill color buttons Y = 495 - 515
-        {0, 495, 25, 515, [](){ fillRed = 128; fillGreen = 128; fillBlue = 0; }},
-        {25, 495, 50, 515, [](){ fillRed = 0; fillGreen = 128; fillBlue = 0; }},
-        {50, 495, 75, 515, [](){ fillRed = 128; fillGreen = 0; fillBlue = 128; }},
-        {75, 495, 100, 515, [](){ fillRed = 0; fillGreen = 128; fillBlue = 128; }},
+        {0, 495, 25, 515, [](){ fillRed = 60; fillGreen = 91; fillBlue = 135; }},
+        {25, 495, 50, 515, [](){ fillRed = 95; fillGreen = 154; fillBlue = 205; }},
+        {50, 495, 75, 515, [](){ fillRed = 157; fillGreen = 148; fillBlue = 255; }},
+        {75, 495, 100, 515, [](){ fillRed = 199; fillGreen = 128; fillBlue = 232; }},
     };
 
     for (const Button& button : buttons) {
