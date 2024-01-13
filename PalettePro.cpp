@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_render.h>
 #include <iostream>
 #include <string.h>
@@ -7,10 +8,10 @@
 #include <vector>
 #include <sstream>
 #include <functional>
-#include "LIB/tinyfiledialogs.h" //external library for native file dialogs
+#include "src/tinyfiledialogs.h" //external library for native file dialogs
 
 
-// Compile/Make Command: g++ -std=c++11 -Wall -Wextra -pedantic -o PalettePro PalettePro.cpp LIB/tinyfiledialogs.c -lSDL2 -lSDL2main -lSDL2_image
+// Compile/Make Command: g++ -std=c++11 -Wall -Wextra -pedantic -o PalettePro PalettePro.cpp src/tinyfiledialogs.c -lSDL2 -lSDL2main -lSDL2_image
 
 /* --------------------------------DECLARE GLOBAL VARIABLES-------------------------------- */
 
@@ -407,89 +408,6 @@ void bucketFill (int xCurrent, int yCurrent, int isMouseDown)
 }
 
 
-#define SDL_USEREVENT_SAVE_FILE SDL_USEREVENT + 1
-
-int saveFileThread(void* data)
-// This function will be run in a separate thread so the main loop doesn't get blocked and the program doesnt hang
-{
-    char const * result = tinyfd_saveFileDialog(
-        "Save Image",  // Dialog title
-        "",            // Default file path
-        3,             // Number of file types
-        (char const *[]){"*.bmp", "*.jpg", "*.png"},  // Filters
-        NULL           // Description for filters
-    );
-
-    if (result != NULL) {
-        // Send a custom event to the main loop
-        SDL_Event event;
-        SDL_zero(event);
-        event.type = SDL_USEREVENT_SAVE_FILE;
-        event.user.data1 = strdup(result);  // Duplicate the string to avoid it being freed prematurely
-        SDL_PushEvent(&event);
-    } else {
-        printf("No file was selected.\n");
-    }
-
-    return 0;
-}
-
-
-void saveImage() {
-    SDL_Thread* thread = SDL_CreateThread(saveFileThread, "SaveFileDialogThread", NULL);
-    if (thread == NULL) {
-        printf("Error: Could not create thread\n");
-    } else {
-        SDL_DetachThread(thread);
-    }
-
-    // Wait for the file dialog to finish
-    SDL_Event event;
-    while (SDL_WaitEvent(&event)) {
-        if (event.type == SDL_USEREVENT_SAVE_FILE) {
-            char* filePath = static_cast<char*>(event.user.data1);
-
-            // Create an SDL_Surface from backgroundLayerPixels
-            SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
-                backgroundLayerPixels,  // Pixels
-                screenWidth,            // Width
-                screenHeight,           // Height
-                32,                     // Depth
-                screenWidth * 4,        // Pitch
-                0x000000ff,             // Rmask
-                0x0000ff00,             // Gmask
-                0x00ff0000,             // Bmask
-                0xff000000              // Amask
-            );
-            if (surface == nullptr) {
-                printf("Error: Could not create surface.\n");
-                return;
-            }
-
-            const char* extension = strrchr(filePath, '.');
-            if (extension != NULL) {
-                if (strcmp(extension, ".bmp") == 0) {
-                    SDL_SaveBMP(surface, filePath);
-                } else if (strcmp(extension, ".jpg") == 0 || strcmp(extension, ".jpeg") == 0) {
-                    IMG_SaveJPG(surface, filePath, 100);
-                } else if (strcmp(extension, ".png") == 0) {
-                    IMG_SavePNG(surface, filePath);
-                } else {
-                    printf("Error: Unsupported file format.\n");
-                }
-            } else {
-                printf("Error: Could not determine file format.\n");
-            }
-
-
-            // Clean up
-            SDL_FreeSurface(surface);
-            free(filePath);  // Free the duplicated string
-            break;
-        }
-    }
-}
-
 
 #define SDL_USEREVENT_OPEN_FILE SDL_USEREVENT + 1
 
@@ -600,8 +518,8 @@ void handleGUIButtons(int x1, int y1)
         {50, 100, 100, 150, [](){ currentTool = FILL; }},
 
         // Image save and load buttons
-        {0, 170, 50, 210, [](){ printf("SAVE IMAGE BUTTON PRESSED\n");}},
-        {50, 170, 100, 210, [](){ printf("LOAD IMAGE BUTTON PRESSED\n"); loadImage();}},
+        {0, 170, 50, 210, [](){printf("SAVE IMAGE BUTTON PRESSED\n");}},
+        {50, 170, 100, 210, [](){printf("LOAD IMAGE BUTTON PRESSED\n"); loadImage();}},
 
         // Stroke width buttons Y = 210 - 230
         {0, 230, 20, 250, [](){ strokeWidth = 1; }},
