@@ -97,7 +97,7 @@ void useStrokeWidth(int xCentre, int yCentre)
 }
 
 
-void drawBrush (int x1, int y1, int x2, int y2, bool isMouseDown)
+void drawBrush (int x2, int y2, bool isMouseDown)
 //Function for drawing a single pixel or calling the useStrokeWidth function when the left mouse button is held down.
 {
     // Convert stroke and fill colors to 32-bit format
@@ -117,7 +117,7 @@ void drawBrush (int x1, int y1, int x2, int y2, bool isMouseDown)
 }
 
 
-void eraser (int x1, int y1, int x2, int y2, bool isMouseDown)
+void eraser (int x2, int y2, bool isMouseDown)
 //Function for erasing a single pixel or calling the useStrokeWidth function when the left mouse button is held down.
 {
     if (isMouseDown)
@@ -233,16 +233,10 @@ Based upon midpoint ellipse algorithm from https://www.javatpoint.com/computer-g
 
         SDL_Event ellipseEvent;
         SDL_WaitEvent(&ellipseEvent);
-        switch (ellipseEvent.type) {
-            case SDL_KEYDOWN:
-                switch (ellipseEvent.key.keysym.sym) {
-                    case SDLK_LSHIFT:
-                    case SDLK_RSHIFT:
-                        xRadius = radius;
-                        yRadius = radius;
-                        break;
-                }
-                break;
+        const Uint8* state = SDL_GetKeyboardState(NULL);
+        if (state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT]) {
+        xRadius = radius;
+        yRadius = radius;
         }
 
         // Fill the ellipse if fill color is specified
@@ -251,11 +245,9 @@ Based upon midpoint ellipse algorithm from https://www.javatpoint.com/computer-g
             int yCurrent = yRadius;
             int aSquared = xRadius * xRadius;
             int bSquared = yRadius * yRadius;
-            int twoASquared = 2 * aSquared;
             int twoBSquared = 2 * bSquared;
             int fourASquared = 4 * aSquared;
             int fourBSquared = 4 * bSquared;
-            int xEnd = round(aSquared / sqrt(aSquared + bSquared));
 
             int xDistance = 0;
             int yDistance = fourASquared * yCurrent;
@@ -305,11 +297,9 @@ Based upon midpoint ellipse algorithm from https://www.javatpoint.com/computer-g
             int yCurrent = yRadius;
             int aSquared = xRadius * xRadius;
             int bSquared = yRadius * yRadius;
-            int twoASquared = 2 * aSquared;
             int twoBSquared = 2 * bSquared;
             int fourASquared = 4 * aSquared;
             int fourBSquared = 4 * bSquared;
-            int xEnd = round(aSquared / sqrt(aSquared + bSquared));
 
             int xDistance = 0;
             int yDistance = fourASquared * yCurrent;
@@ -374,15 +364,15 @@ void bucketFill (int xCurrent, int yCurrent, bool isMouseDown)
 // Function for filling an area with the fillColour using 4-point approach outlined in Eike's lecture - may struggle with very large areas
 {
     uint32_t fillColour32 = 0;
-    fillColour32 |= (fillRed & 255) << 24;
-    fillColour32 |= (fillGreen & 255) << 16;
-    fillColour32 |= (fillBlue & 255) << 8;
-    fillColour32 |= (fillAlpha & 255);
+        fillColour32 |= (fillRed & 255) << 24;
+        fillColour32 |= (fillGreen & 255) << 16;
+        fillColour32 |= (fillBlue & 255) << 8;
+        fillColour32 |= (fillAlpha & 255);
     uint32_t fillStartColour32 = 0;
-    fillStartColour32 |= (fillStartRed & 255) << 24;
-    fillStartColour32 |= (fillStartGreen & 255) << 16;
-    fillStartColour32 |= (fillStartBlue & 255) << 8;
-    fillStartColour32 |= (fillStartAlpha & 255);
+        fillStartColour32 |= (fillStartRed & 255) << 24;
+        fillStartColour32 |= (fillStartGreen & 255) << 16;
+        fillStartColour32 |= (fillStartBlue & 255) << 8;
+        fillStartColour32 |= (fillStartAlpha & 255);
 
     if (!isMouseDown)
     {
@@ -424,33 +414,26 @@ int saveFileThread(void* data)
     );
 
     if (result != NULL) {
-        // Send a custom event to the main loop
+        // Send SDL_USEREVENT_SAVE_FILE event to the saveImage function
         SDL_Event event;
         SDL_zero(event);
         event.type = SDL_USEREVENT_SAVE_FILE;
         event.user.data1 = strdup(result);  // Duplicate the string to avoid it being freed prematurely
         SDL_PushEvent(&event);
     } else {
-        printf("No file was selected.\n");
-
-        // Send a custom event to the main loop
+        // Send SDL_USEREVENT_FILE_DIALOG_CLOSED event to the saveImage function
         SDL_Event event;
         SDL_zero(event);
         event.type = SDL_USEREVENT_FILE_DIALOG_CLOSED;
         SDL_PushEvent(&event);
     }
-
     return 0;
 }
 
 
 void saveImage() {
     SDL_Thread * thread = SDL_CreateThread(saveFileThread, "SaveFileDialogThread", NULL);
-    if (thread == NULL) {
-        printf("Error: Could not create thread\n");
-    } else {
-        SDL_DetachThread(thread);
-    }
+    SDL_DetachThread(thread);
 
     // Wait for the file dialog to finish
     SDL_Event event;
@@ -470,26 +453,18 @@ void saveImage() {
                 0x0000ff00,             // Bmask
                 0x000000ff              // Amask
             );
-            if (surface == nullptr) {
-                printf("Error: Could not create surface.\n");
-                return;
-            }
 
             const char* extension = strrchr(filePath, '.');
-            if (extension != NULL) {
-                if (strcmp(extension, ".bmp") == 0) {
-                    SDL_SaveBMP(surface, filePath);
-                } else if (strcmp(extension, ".jpg") == 0 || strcmp(extension, ".jpeg") == 0) {
-                    IMG_SaveJPG(surface, filePath, 100);
-                } else if (strcmp(extension, ".png") == 0) {
-                    IMG_SavePNG(surface, filePath);
-                } else {
-                    printf("Error: Unsupported file format.\n");
-                }
-            } else {
-                printf("Error: Could not determine file format.\n");
-            }
 
+            if (strcmp(extension, ".bmp") == 0) {
+                SDL_SaveBMP(surface, filePath);
+            } else if (strcmp(extension, ".jpg") == 0 || strcmp(extension, ".jpeg") == 0) {
+                IMG_SaveJPG(surface, filePath, 100);
+            } else if (strcmp(extension, ".png") == 0) {
+                IMG_SavePNG(surface, filePath);
+            } else {
+                printf("Error: Unsupported file format.\n");
+            }
 
             // Clean up
             SDL_FreeSurface(surface);
@@ -503,7 +478,7 @@ void saveImage() {
 
 
 #define SDL_USEREVENT_OPEN_FILE SDL_USEREVENT + 1
-
+#define SDL_USEREVENT_FILE_DIALOG_CLOSED SDL_USEREVENT + 2
 
 int openFileThread(void* data)
 // This function will be run in a separate thread so the main loop doesn't get blocked and the program doesnt hang
@@ -516,20 +491,18 @@ int openFileThread(void* data)
         14,            // Number of file types
         filters,       // Filters
         NULL,          // Description for filters
-        0              // DO NOTllow multiple selection
+        0              // DO NOT allow multiple selection
     );
 
     if (result != NULL) {
-        // Send a custom event to the main loop
+        // Send SDL_USEREVENT_OPEN_FILE to the loadImage function
         SDL_Event event;
         SDL_zero(event);
         event.type = SDL_USEREVENT_OPEN_FILE;
         event.user.data1 = strdup(result);  // Duplicate the string to avoid it being freed prematurely
         SDL_PushEvent(&event);
     } else {
-        printf("No file was selected.\n");
-
-        // Send a custom event to the main loop
+        // Send SDL_USEREVENT_FILE_DIALOG_CLOSED to the loadImage function
         SDL_Event event;
         SDL_zero(event);
         event.type = SDL_USEREVENT_FILE_DIALOG_CLOSED;
@@ -542,11 +515,7 @@ int openFileThread(void* data)
 
 void loadImage() {
     SDL_Thread* thread = SDL_CreateThread(openFileThread, "OpenFileDialogThread", NULL);
-    if (thread == NULL) {
-        printf("Error: Could not create thread\n");
-    } else {
-        SDL_DetachThread(thread);
-    }
+    SDL_DetachThread(thread);
 
     // Initialize backgroundLayerPixels to white
     backgroundLayerPixels = new Uint32[screenWidth * screenHeight];
@@ -558,11 +527,8 @@ void loadImage() {
         if (event.type == SDL_USEREVENT_OPEN_FILE) {
             char* filePath = static_cast<char*>(event.user.data1);
 
-            // Load the image and convert it to the SDL_PIXELFORMAT_RGBA8888 format
+            // Load the image to loadedImage surface
             SDL_Surface* loadedImage = IMG_Load(filePath);
-            if (loadedImage == nullptr) {
-                printf("Error: Could not read file correctly.\n");
-            }
 
             // Scale the image to fit the window
             float scale = std::min(
@@ -572,9 +538,9 @@ void loadImage() {
             int newWidth = (int)(loadedImage->w * scale);
             int newHeight = (int)(loadedImage->h * scale);
             SDL_Surface* scaledImage = SDL_CreateRGBSurfaceWithFormat(0, newWidth, newHeight, 32, SDL_PIXELFORMAT_RGBA8888);
-            SDL_BlitScaled(loadedImage, NULL, scaledImage, NULL);
 
             // Blit the scaled image onto the backgroundLayerPixels at the center
+            SDL_BlitScaled(loadedImage, NULL, scaledImage, NULL);
             int startX = (screenWidth - newWidth) / 2;
             int startY = (screenHeight - newHeight) / 2;
             for (int y = 0; y < newHeight; y++) {
@@ -589,9 +555,8 @@ void loadImage() {
             // Clean up
             SDL_FreeSurface(loadedImage);
             SDL_FreeSurface(scaledImage);
-            printf("Image loaded\n");
-
             free(filePath);  // Free the duplicated string
+
             break;
         } else if (event.type == SDL_USEREVENT_FILE_DIALOG_CLOSED) {
             break;
@@ -619,8 +584,8 @@ void handleGUIButtons(int x1, int y1)
         {50, 100, 100, 150, [](){ currentTool = RECTANGLE; }},
 
         // Image save and load buttons
-        {0, 170, 50, 210, [](){ printf("SAVE IMAGE BUTTON PRESSED\n"); saveImage();}},
-        {50, 170, 100, 210, [](){ printf("LOAD IMAGE BUTTON PRESSED\n"); loadImage();}},
+        {0, 170, 50, 210, [](){  saveImage(); }},
+        {50, 170, 100, 210, [](){  loadImage(); }},
 
         // Stroke width buttons Y = 210 - 230
         {0, 230, 20, 250, [](){ strokeWidth = 1; }},
@@ -683,15 +648,15 @@ void handleGUIButtons(int x1, int y1)
 }
 
 
-void handleToolAction(int x1, int y1, int x2, int y2, bool isMouseDown, bool drawing)
+void handleToolAction(int x1, int y1, int x2, int y2, bool isMouseDown)
 // Function to handle which tool to pass the variables based on the current tool selected
 {
     switch (currentTool) {
         case BRUSH:
-            drawBrush(x1, y1, x2, y2, isMouseDown);
+            drawBrush(x2, y2, isMouseDown);
             break;
         case ERASER:
-            eraser(x1, y1, x2, y2, isMouseDown);
+            eraser(x2, y2, isMouseDown);
             break;
         case LINE:
             drawLine(x1, y1, x2, y2, isMouseDown);
@@ -703,10 +668,9 @@ void handleToolAction(int x1, int y1, int x2, int y2, bool isMouseDown, bool dra
             drawEllipse(x1, y1, x2, y2, isMouseDown);
             break;
         case FILL:
-            bucketFill(x2, y2, isMouseDown);
+            bucketFill(x1, y1, isMouseDown);
             break;
         default:
-            printf("Error: Tool not implemented yet\n");
             break;
     }
 }
@@ -714,26 +678,21 @@ void handleToolAction(int x1, int y1, int x2, int y2, bool isMouseDown, bool dra
 
 /* --------------------------------MAIN FUNCTION-------------------------------- */
 
-int main(int argc, char **argv)
+int main()
 {
-    // Init SDL with video subyStepstem
+    // Init SDL with video sub-system
     SDL_Init(SDL_INIT_VIDEO);
-
-    int mainWindowX, mainWindowY;
-
 
     // Creating Main Window
     SDL_Window *window = SDL_CreateWindow("BRUSH SELECTED, STROKE WIDTH 1, STROKE COLOUR (255,255,255), FILL COLOUR (-1, -1, -1)",
         SDL_WINDOWPOS_UNDEFINED, 30, screenWidth, screenHeight, SDL_WINDOW_ALLOW_HIGHDPI);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
     SDL_Texture *backgroundLayer = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, screenWidth, screenHeight);
-    SDL_GetWindowPosition(window, &mainWindowX, &mainWindowY);
 
     // Creating Blank Canvas
     backgroundLayerPixels = new Uint32[screenWidth * screenHeight];
     memset(backgroundLayerPixels, 255, screenWidth * screenHeight * sizeof(Uint32));
     SDL_UpdateTexture(backgroundLayer, NULL, backgroundLayerPixels, screenWidth * sizeof(Uint32));
-    printf ("Blank Canvas Created\n");
 
     // Load GUI
     SDL_Surface *gui_image = IMG_Load("GUI.png");
@@ -741,6 +700,7 @@ int main(int argc, char **argv)
     SDL_FreeSurface(gui_image);
     SDL_Rect dstrect = { 0, 0, guiWidth, screenHeight };
     SDL_RenderCopy(renderer, guiTexture, NULL, &dstrect);
+
     //SDL_RenderPresent commits texture to video memory
     SDL_RenderPresent(renderer);
 
@@ -838,7 +798,7 @@ int main(int argc, char **argv)
                     if (y2 > 5 && y2 <= (screenHeight - 5) && x2 >= (guiWidth + 5) && x2 <= (screenWidth - 5))
                     {
                         drawing = true;
-                        handleToolAction(x1, y1, x2, y2, true, drawing);
+                        handleToolAction(x1, y1, x2, y2, true);
                     }
                     else
                     {
@@ -847,20 +807,18 @@ int main(int argc, char **argv)
                 }
                 break;
             case SDL_MOUSEBUTTONUP:
-                if (event.button.button == SDL_BUTTON_LEFT)
-                {
+                if (event.button.button == SDL_BUTTON_LEFT) {
                     if (drawing) {
-                    drawing = false;
-
-                    if (currentTool == FILL)
-                    {
-                        Uint32 fillStartColour = backgroundLayerPixels[y2 * screenWidth + x2];
-                        fillStartRed = fillStartColour >> 24;
-                        fillStartGreen = (fillStartColour >> 16) & 255;
-                        fillStartBlue = (fillStartColour >> 8) & 255;
-                        fillStartAlpha = fillStartColour & 255;
-                    }
-                    handleToolAction(x1, y1, x2, y2, false, drawing);
+                        drawing = false;
+                        if (currentTool == FILL) {
+                            // ideally this would be in the bucketFill function but I couldn't get it to work as bucketFill is recursive
+                            Uint32 fillStartColour = backgroundLayerPixels[y1 * screenWidth + x1];
+                            fillStartRed = fillStartColour >> 24;
+                            fillStartGreen = (fillStartColour >> 16) & 255;
+                            fillStartBlue = (fillStartColour >> 8) & 255;
+                            fillStartAlpha = fillStartColour & 255;
+                        }
+                        handleToolAction(x1, y1, x2, y2, false);
                     }
                 }
                 break;
